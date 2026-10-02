@@ -14,3 +14,5 @@ export {
   replay,
   engine,
 } from './engine';
+// Computer players (owned by the web agent, see AGENTS.md).
+export * from './ai';

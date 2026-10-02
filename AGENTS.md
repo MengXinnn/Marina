@@ -12,7 +12,8 @@
 
 | 区域 | 负责人 | 说明 |
 |---|---|---|
-| `packages/engine/**`（`src/contract/` 除外） | **Codex（ChatGPT）— 引擎/后端** | 纯 TypeScript 规则引擎：状态机、合法动作、结算、随机数、存档格式、AI 玩家、测试 |
+| `packages/engine/**`（`src/contract/`、`src/ai/` 除外） | **Codex（ChatGPT）— 引擎/后端** | 纯 TypeScript 规则引擎：状态机、合法动作、结算、随机数、存档格式、测试 |
+| `packages/engine/src/ai/**`、`packages/engine/test/ai.test.ts`（以及 `src/index.ts` 末尾导出它的那一行） | **Claude** | 电脑玩家：只读 `PlayerView` + `getLegalActions` 的结果，不碰引擎内部（2026-10-02 负责人决定由 Claude 接手） |
 | `packages/web/**` | **Claude — 前端** | Vite + React + three.js（@react-three/fiber）体素渲染、动画、HUD、交互、音效、hotseat 隐私遮挡 |
 | `packages/engine/src/contract/**` | **共同所有** | 引擎 ⇄ 前端接口契约。改动必须走 `contract` 流程（见下） |
 | `docs/RULES.md` | 共同所有 | 规则规格；【裁定】条目改动需人类拍板 |
