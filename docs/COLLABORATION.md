@@ -43,5 +43,5 @@
 | **M1 核心** | `createGame`、竞拍、港务长、派遣、移动、海盗、领航员、结算、借贷、计分、`getLegalActions`、`getPlayerView`、`replay`；把 `rules.todo` 全部变成真实测试；3–5 个 fixtures | 完整 3D 场景（全部位置/船/同伙）、HUD（玩家、黑市、股票）、按 pending 类型的操作面板（mock 驱动） |
 | **M2 联调** | 根据前端反馈修契约；随机对局 fuzz 测试（合法动作随机走到结束不崩、金钱守恒） | 接入真实引擎；事件驱动动画队列；开局设置页；hotseat 交接遮挡层；存档/读档；撤销 |
 | **M3 打磨** | 性能与边界情况；存档版本迁移 | 音效、粒子、镜头运镜、规则速查/教程、中英双语、移动端适配 |
-| **M4 AI** | `ai/`：启发式电脑玩家（`chooseAction(view)`，至少 easy/normal） | 电脑玩家回合节奏与可视化 |
+| **M4 AI** | —（已改由 Claude 负责） | `engine/src/ai`：启发式电脑玩家 `chooseBotAction(view, legal, {level, random})`（easy/normal）；电脑玩家回合节奏与可视化 |
 | **M5 发布** | — | GitHub Pages 部署、Playwright 冒烟测试 |

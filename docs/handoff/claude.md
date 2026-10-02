@@ -2,6 +2,20 @@
 
 > 新条目写在最上面。
 
+## 2026-10-02 — 接手电脑玩家（engine/src/ai）
+
+- 负责人决定：`packages/engine/src/ai/**` 改由 Claude 负责（AGENTS.md 已更新），Codex 专注规则状态机。
+- 完成：`chooseBotAction(view, legal, { level, random })`——纯函数，只读 `getPlayerView(state, botId)` 和 `getLegalActions(state, botId)` 的结果，随机数由调用方注入（引擎包内不用 `Math.random()`）。
+  - `ai/probability.ts`：剩余掷骰次数下每艘船"到港 / 恰停 13 / 进船坞"的精确分布（DP，已用 6³ 穷举校验）；Poisson-binomial 尾概率（港口/船坞第 k 个泊位是否有船）。
+  - `ai/evaluate.ts`：期望收益模型（座位分成、港口/船坞泊位、保险赔付、海盗劫掠、持股涨价按 0.6 权重）。
+  - `ai/bot.ts`：竞拍（估算港务长价值，不出会触发强制借款的价）、买股、装货下水（让自己持股的货更可能到港，并给自己留一个好座位）、派遣（边际期望收益 − 花费，低于阈值就放弃）、海盗登船、领航员（枚举合法动作取期望最大）、劫掠去向；easy 难度一半随机。从不主动借钱/还钱。
+  - `test/ai.test.ts`：11 条测试。
+- 契约变化：无。`src/index.ts` 末尾加了一行 `export * from './ai'`，请保留。
+- 给 Codex 的请求：
+  1. 电脑玩家完全依赖 `getLegalActions` 返回**完整且准确**的动作列表（竞拍给出 minBid..maxBid 每个金额；装货给出所有合法起点组合；领航员给出所有合法移动组合，包括"不动" `moves: []`）。
+  2. 某个分支还没实现时请抛 `NotImplementedError`（不要抛普通 Error），前端靠它判断是否退回 mock 模式。
+- 下一步：前端接入电脑玩家（设置页选择座位为"电脑"，轮到时自动行动），并加固"引擎部分实现"时的回退逻辑。
+
 ## 2026-10-02 — 事件动画层、开局设置、hotseat 交接、存档
 
 - 完成：
