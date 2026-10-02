@@ -11,7 +11,7 @@ import {
   type Ware,
 } from '@manila/engine';
 import { zh } from '../i18n/zh';
-import { useCurtain, useGame, useView } from '../game/store';
+import { useBotActing, useCurtain, useGame, useView } from '../game/store';
 import { PLAYER_COLORS } from '../scene/palette';
 import { WareChip } from './Hud';
 
@@ -24,8 +24,8 @@ export function ActionBar() {
   const playing = useGame((s) => s.playing);
   const skip = useGame((s) => s.skipAnimation);
   const curtain = useCurtain();
-  const bots = useGame((s) => s.bots);
   const pending = view.pending;
+  const botActing = useBotActing('playerId' in pending ? pending.playerId : null);
   if (playing)
     return (
       <footer className="actionbar panel">
@@ -40,7 +40,7 @@ export function ActionBar() {
   if (curtain) return null;
   const actor =
     'playerId' in pending ? view.players.find((p) => p.id === pending.playerId) : undefined;
-  if (actor && bots[actor.id])
+  if (actor && botActing)
     return (
       <footer className="actionbar panel">
         <div

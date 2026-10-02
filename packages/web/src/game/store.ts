@@ -81,6 +81,8 @@ interface GameStore {
   /** Hotseat: the player who confirmed holding the device. */
   revealedFor: PlayerId | null;
   bots: BotSeats;
+  /** A computer seat that could not act this turn; humans may act for it until the turn advances. */
+  botStalled: PlayerId | null;
   lastError: EngineError | null;
   notice: string | null;
 
@@ -294,8 +296,10 @@ export const useGame = create<GameStore>((set, get) => {
         s.dispatch(action);
       } catch (e) {
         if (!(e instanceof NotImplementedError)) console.error(e);
-        set({ notice: e instanceof NotImplementedError ? 'engine-pending' : 'bot-error' });
       }
+      // The engine refused or the bot failed: hand this decision to the humans instead of
+      // leaving the seat "thinking" forever. Automation resumes once the turn advances.
+      if (get().state.turn === turn) set({ botStalled: actor, notice: 'bot-stalled' });
     }, BOT_THINK_MS / settings.speed);
   }
 
@@ -313,6 +317,7 @@ export const useGame = create<GameStore>((set, get) => {
     settings: { privacy: true, speed: 1 },
     revealedFor: null,
     bots: {},
+    botStalled: null,
     lastError: null,
     notice: null,
 
@@ -334,6 +339,7 @@ export const useGame = create<GameStore>((set, get) => {
         revealedFor: null,
         // Bots only act through the real engine; in mock mode they would just "think" forever.
         bots: mode === 'live' ? bots : {},
+        botStalled: null,
         notice: mode === 'mock' ? 'mock' : null,
       });
       if (mode === 'live') writeSave(state, bots);
@@ -353,6 +359,7 @@ export const useGame = create<GameStore>((set, get) => {
         log: [{ id: nextId++, text: '—— 继续上局 ——' }],
         revealedFor: null,
         bots: saved.bots,
+        botStalled: null,
       });
       scheduleBot();
       return true;
@@ -386,7 +393,7 @@ export const useGame = create<GameStore>((set, get) => {
         set({ lastError: result.error, notice: result.error.code });
         return;
       }
-      set({ state: result.state, history: [...history, state], lastError: null });
+      set({ state: result.state, history: [...history, state], lastError: null, botStalled: null });
       if (result.state.phase === 'game-over') clearSave();
       else writeSave(result.state, get().bots);
       void animate(result.events, result.state);
@@ -402,7 +409,13 @@ export const useGame = create<GameStore>((set, get) => {
       if (bots[actorOf(prev) ?? ''] !== undefined) return;
       runToken++;
       if (botTimer) clearTimeout(botTimer);
-      set({ state: prev, display: prev, history: history.slice(0, i), dice: null });
+      set({
+        state: prev,
+        display: prev,
+        history: history.slice(0, i),
+        dice: null,
+        botStalled: null,
+      });
       writeSave(prev, bots);
     },
 
@@ -452,6 +465,13 @@ export const useGame = create<GameStore>((set, get) => {
 /** The player who must act in the displayed state. */
 export function actorOf(state: GameState): PlayerId | null {
   return 'playerId' in state.pending ? state.pending.playerId : null;
+}
+
+/** True while a computer seat is acting on its own (not stalled). */
+export function useBotActing(actor: PlayerId | null): boolean {
+  const bots = useGame((s) => s.bots);
+  const stalled = useGame((s) => s.botStalled);
+  return !!actor && !!bots[actor] && stalled !== actor;
 }
 
 /** Whose private info may be shown right now. */

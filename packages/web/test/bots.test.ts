@@ -92,6 +92,20 @@ describe('store: computer players', () => {
     expect('playerId' in s.pending && s.pending.playerId).toBe('p1');
   });
 
+  it('hands a stalled computer turn to the humans instead of "thinking" forever', async () => {
+    useGame.getState().dispatch(humanPass);
+    await vi.waitFor(() => expect(useGame.getState().state.turn).toBe(1)); // p2 (bot) to act
+    fake.applyThrows = true; // engine cannot apply the bot's move yet
+    vi.advanceTimersByTime(2000);
+    expect(useGame.getState().botStalled).toBe('p2');
+    expect(useGame.getState().notice).toBe('bot-stalled');
+
+    fake.applyThrows = false; // a human acts for the stalled seat
+    useGame.getState().dispatch({ type: 'pass-placement', playerId: 'p2' });
+    expect(useGame.getState().state.turn).toBe(2);
+    expect(useGame.getState().botStalled).toBeNull();
+  });
+
   it('keeps running when the engine throws NotImplementedError mid-game', () => {
     fake.applyThrows = true;
     expect(() => useGame.getState().dispatch(humanPass)).not.toThrow();
