@@ -122,16 +122,20 @@ export function standModel(kind: StandKind, cost: number): VoxelGrid {
   return g;
 }
 
-/** Signpost showing text on its front face (e.g. "A6", "C15"). */
-export function signModel(text: string, board = ENV.plank, ink = ENV.woodDark): VoxelGrid {
-  const w = textWidth(text) + 2;
-  const g = new VoxelGrid(w, 13, 2);
+/** Signpost with `text` on its front face, framed with a 1-voxel margin so glyphs never touch the frame. */
+export function signModel(
+  text: string,
+  board: number = ENV.plank,
+  ink: number = 0x2a1a10,
+): VoxelGrid {
+  const w = textWidth(text) + 4;
+  const g = new VoxelGrid(w, 15, 2);
   const mid = Math.floor(w / 2);
-  g.box(mid, 0, 0, mid, 6, 0, ENV.woodDark);
-  g.box(0, 6, 1, w - 1, 12, 1, (x, y) =>
-    x === 0 || x === w - 1 || y === 6 || y === 12 ? ENV.woodDark : board,
+  g.box(mid, 0, 0, mid, 7, 0, ENV.woodDark);
+  g.box(0, 6, 1, w - 1, 14, 1, (x, y) =>
+    x === 0 || x === w - 1 || y === 6 || y === 14 ? ENV.woodDark : board,
   );
-  paintText(g, text, 1, 7, 1, ink, 'front');
+  paintText(g, text, 2, 8, 1, ink, 'front');
   return g;
 }
 

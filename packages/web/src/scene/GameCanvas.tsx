@@ -20,7 +20,10 @@ function usePixelRatio(): number {
 export function GameCanvas() {
   const dpr = usePixelRatio();
   const [tx, ty, tz] = CAMERA_TARGET;
-  const zoom = useMemo(() => Math.max(18, window.innerWidth / 34), []);
+  const zoom = useMemo(
+    () => Math.max(20, Math.min(window.innerWidth / 26, window.innerHeight / 16.5)),
+    [],
+  );
   return (
     <Canvas dpr={dpr} shadows gl={{ antialias: false }} style={{ position: 'fixed', inset: 0 }}>
       <color attach="background" args={['#0f4c6e']} />

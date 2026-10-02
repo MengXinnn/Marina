@@ -1,15 +1,16 @@
-import { useMemo } from 'react';
 import type { RouteIndex } from '@manila/engine';
+import { Board } from './Board';
 import { LANE_Z, spaceX } from './layout';
+import { voxelMaterial } from './materials';
 import { tileModel } from './models';
-import { buildTerrain } from './terrain';
+import { Scenery } from './Scenery';
+import { getTerrain } from './terrain';
 import { VoxelMesh } from './VoxelMesh';
 import { Water } from './Water';
-import { voxelMaterial } from './materials';
 
-/** Static harbour: terrain, water and the three sea routes. Pieces are added in Board.tsx. */
+/** The whole diorama: terrain, water, route markers, scenery and the live game pieces. */
 export function Harbor() {
-  const terrain = useMemo(() => buildTerrain(), []);
+  const terrain = getTerrain();
   return (
     <group>
       <Water shoreTexture={terrain.shoreTexture} />
@@ -24,6 +25,8 @@ export function Harbor() {
           />
         )),
       )}
+      <Scenery />
+      <Board />
     </group>
   );
 }

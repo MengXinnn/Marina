@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { ENV } from './palette';
 import { VoxelGrid, buildVoxelGeometry } from './voxel';
 import {
-  GROUND_Y,
   PILOT_ISLAND,
   QUAY_X,
   SOUTH_SHORE_Z,
@@ -12,7 +11,7 @@ import {
 } from './layout';
 
 /** World rectangle covered by the terrain grid. */
-export const TERRAIN_BOUNDS = { minX: -12, maxX: 30, minZ: -11, maxZ: 12 };
+export const TERRAIN_BOUNDS = { minX: -14, maxX: 34, minZ: -13, maxZ: 16 };
 
 function valueNoise(x: number, z: number): number {
   const xi = Math.floor(x);
@@ -33,14 +32,15 @@ function valueNoise(x: number, z: number): number {
 const noise = (x: number, z: number) =>
   valueNoise(x * 0.45, z * 0.45) * 0.65 + valueNoise(x * 1.3 + 9, z * 1.3 - 4) * 0.35 - 0.5;
 
-type Kind = 0 | 1 | 2; // 0 water, 1 natural land, 2 quay (man-made, straight edge)
+type Kind = 0 | 1 | 2 | 3; // 0 water, 1 natural land, 2 quay (man-made), 3 shipyard apron (low, flat)
 
 function landKind(x: number, z: number): Kind {
   const n = noise(x, z);
-  if (x > QUAY_X - 0.05 && z > -4.6 && z < 5.2) return 2; // Manila quay
-  if (x > QUAY_X + 0.3 + n * 0.8) return 1; // Manila
+  if (x > QUAY_X - 0.05 && x < QUAY_X + 1.9 && z > -4.6 && z < 5.2) return 2; // Manila quay
+  if (x > QUAY_X + 0.3 + n * 0.8 || (x > QUAY_X && z > -4.6 && z < 5.2)) return 1; // Manila
   if (x < WEST_SHORE_X + n * 0.9) return 1; // west harbour
-  if (z > SOUTH_SHORE_Z + n * 0.9 && x > -6 && x < 24) return 1; // south beach (shipyard)
+  if (x > 6.6 && x < 17.6 && z > 5.7 && z < 8.6) return 3; // shipyard apron
+  if (z > SOUTH_SHORE_Z + n * 0.9) return 1; // south beach
   const [ix, iz] = PILOT_ISLAND;
   if (Math.hypot(x - ix, (z - iz) * 1.25) < 1.9 + n * 0.8) return 1; // pilot island
   return 0;
@@ -48,6 +48,8 @@ function landKind(x: number, z: number): Kind {
 
 export interface Terrain {
   geometry: THREE.BufferGeometry;
+  /** Surface height per terrain cell (0 for water). */
+  heights: Float32Array;
   /** R channel: distance to the nearest land (0 = coast, 255 = open sea). Used by the water shader. */
   shoreTexture: THREE.DataTexture;
 }
@@ -97,6 +99,7 @@ export function buildTerrain(): Terrain {
   const fromLand = bfs((v) => v !== 0);
 
   const grid = new VoxelGrid(W, 4, D);
+  const heights = new Float32Array(W * D);
   for (let k = 0; k < D; k++)
     for (let i = 0; i < W; i++) {
       const c = i + k * W;
@@ -106,6 +109,10 @@ export function buildTerrain(): Terrain {
       const z = minZ + (k + 0.5) * S;
       const d = fromWater[c]!;
       const n = noise(x * 2, z * 2);
+      if (kd === 3) {
+        grid.set(i, 0, k, (i + k) % 7 === 0 ? ENV.dirt : ENV.wetSand);
+        continue;
+      }
       if (kd === 2) {
         // stone quay with a timber edge
         grid.box(i, 0, k, i, 2, k, d <= 1 ? ENV.woodDark : (i + k) % 2 ? ENV.rock : 0x9c9892);
@@ -137,10 +144,35 @@ export function buildTerrain(): Terrain {
   shoreTexture.magFilter = THREE.LinearFilter;
   shoreTexture.minFilter = THREE.LinearFilter;
   shoreTexture.needsUpdate = true;
-  return { geometry, shoreTexture };
+  for (let c = 0; c < W * D; c++) {
+    const i = c % W;
+    const k = (c - i) / W;
+    let top = -1;
+    for (let y = grid.h - 1; y >= 0; y--)
+      if (grid.filled(i, y, k)) {
+        top = y;
+        break;
+      }
+    heights[c] = top < 0 ? 0 : TERRAIN_BASE_Y + (top + 1) * S;
+  }
+  return { geometry, heights, shoreTexture };
 }
 
-/** Height of the land surface at a world position (for placing props). */
-export function groundHeight(x: number, z: number): number {
-  return landKind(x, z) === 0 ? 0 : GROUND_Y;
+let cached: Terrain | null = null;
+/** Terrain is static, so build it once per session. */
+export function getTerrain(): Terrain {
+  cached ??= buildTerrain();
+  return cached;
+}
+
+/** Height of the surface (land top or water level 0) at a world position. */
+export function surfaceY(x: number, z: number): number {
+  const { minX, minZ } = TERRAIN_BOUNDS;
+  const S = TERRAIN_VOXEL;
+  const W = Math.round((TERRAIN_BOUNDS.maxX - minX) / S);
+  const D = Math.round((TERRAIN_BOUNDS.maxZ - minZ) / S);
+  const i = Math.floor((x - minX) / S);
+  const k = Math.floor((z - minZ) / S);
+  if (i < 0 || k < 0 || i >= W || k >= D) return 0;
+  return getTerrain().heights[i + k * W]!;
 }

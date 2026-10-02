@@ -22,8 +22,11 @@ export const TERRAIN_BASE_Y = -0.2;
 export const SAND_Y = 0.3;
 /** Height of the inland surface (grass, quay, city). */
 export const GROUND_Y = 0.55;
-/** Deck height of a floating punt above the water. */
-export const FLOAT_Y = 0.02;
+/** Hull offset of floating boats (keel sits below the water line). */
+export const PUNT_FLOAT_Y = -0.12;
+
+/** Game pieces are drawn a bit larger than the scenery so they stay readable. */
+export const PIECE_SCALE = { punt: 1.35, stand: 1.3, sign: 1.6 } as const;
 
 export const SPACE_STEP = 1.25;
 export const LANE_Z: Record<RouteIndex, number> = { 0: -2.5, 1: 0, 2: 2.5 };
@@ -77,4 +80,4 @@ export const INSURANCE_STAND: [number, number] = [-2.6, 4.4];
 export const HARBOR_OFFICE: [number, number] = [-4.6, -3.4];
 export const WAREHOUSE: [number, number] = [-4.2, 0.2];
 
-export const CAMERA_TARGET: [number, number, number] = [9.2, 0, 0.8];
+export const CAMERA_TARGET: [number, number, number] = [10.2, 0, -1.0];
