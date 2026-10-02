@@ -1,10 +1,19 @@
 import { useFrame, type ThreeElements } from '@react-three/fiber';
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { PlayerColor, PuntState } from '@manila/engine';
 import { WARE_INFO } from '@manila/engine';
 import { PLAYER_COLORS } from './palette';
-import { PIECE_SCALE, PROP_VOXEL, PUNT_FLOAT_Y } from './layout';
+import {
+  LANE_Z,
+  PIECE_SCALE,
+  PORT_BERTH,
+  PROP_VOXEL,
+  PUNT_FLOAT_Y,
+  SHIPYARD_SLIP,
+  spaceX,
+} from './layout';
+import { useDropIn, useWaypointMotion, type Pose, type Waypoint } from './motion';
 import {
   PUNT_DECK_VOXELS,
   PUNT_LENGTH,
@@ -23,12 +32,15 @@ export function Meeple({
   ...group
 }: { color: PlayerColor; pirate?: boolean } & ThreeElements['group']) {
   const c = PLAYER_COLORS[color];
+  const drop = useDropIn();
   return (
     <group {...group}>
-      <VoxelMesh
-        model={`meeple-${color}-${pirate ? 'p' : 'n'}`}
-        build={() => meepleModel(c.main, c.dark, pirate)}
-      />
+      <group ref={drop}>
+        <VoxelMesh
+          model={`meeple-${color}-${pirate ? 'p' : 'n'}`}
+          build={() => meepleModel(c.main, c.dark, pirate)}
+        />
+      </group>
     </group>
   );
 }
@@ -114,12 +126,52 @@ export function Stand({
           <boxGeometry args={[0.8, 0.8, 0.8]} />
         </mesh>
       </group>
-      {occupant && <Meeple color={occupant} pirate={pirateHat} position-y={0.2} />}
+      {occupant && <Meeple key={occupant} color={occupant} pirate={pirateHat} position-y={0.2} />}
       {selectable && actorColor && !occupant && <Marker color={actorColor} hot={hot} />}
       {children}
     </group>
   );
 }
+
+/** Resting pose of a punt for its current status. */
+export function puntPose(p: PuntState): Pose {
+  if (p.status === 'port' && p.dock)
+    return { x: PORT_BERTH[p.dock][0], z: PORT_BERTH[p.dock][1], ry: 0 };
+  if (p.status === 'shipyard' && p.dock)
+    return { x: SHIPYARD_SLIP[p.dock][0], z: SHIPYARD_SLIP[p.dock][1] - 0.2, ry: -Math.PI / 2 };
+  return { x: spaceX(Math.min(p.position, 14)), z: LANE_Z[p.route], ry: 0 };
+}
+
+/** Channel south of the routes used to reach the shipyard. */
+const SHIPYARD_CHANNEL_Z = 4.4;
+
+/** Waypoints from one displayed punt state to the next. */
+function puntPath(prev: PuntState, next: PuntState): Waypoint[] {
+  const z = LANE_Z[next.route];
+  const path: Waypoint[] = [];
+  if (prev.status === 'sailing') {
+    const target = next.status === 'sailing' ? next.position : prev.position;
+    const dir = Math.sign(target - prev.position);
+    for (let i = prev.position + dir; dir !== 0 && i !== target + dir; i += dir)
+      path.push({ x: spaceX(Math.min(i, 14)), z, ry: 0, ms: HOP_MS, hop: true });
+  } else if (next.status === 'sailing') {
+    return []; // new voyage: handled by a jump
+  }
+  const end = puntPose(next);
+  if (next.status === 'port' && prev.status !== 'port') {
+    path.push({ x: spaceX(14), z, ry: 0, ms: 300 }, { ...end, ms: 520 });
+  } else if (next.status === 'shipyard' && prev.status !== 'shipyard') {
+    const x0 = spaceX(Math.min(prev.position, 14));
+    path.push(
+      { x: x0, z: SHIPYARD_CHANNEL_Z, ry: 0, ms: 380 },
+      { x: end.x, z: SHIPYARD_CHANNEL_Z, ry: 0, ms: 180 + Math.abs(end.x - x0) * 50 },
+      { ...end, ms: 420 },
+    );
+  }
+  return path;
+}
+
+const HOP_MS = 240;
 
 /** A loaded punt with its cargo and the accomplices aboard. */
 export function Punt({
@@ -134,48 +186,70 @@ export function Punt({
 } & Pickable &
   ThreeElements['group']) {
   const { selectable, actorColor, onPick, ...group } = pick;
-  const ref = useRef<THREE.Group>(null);
+  const bob = useRef<THREE.Group>(null);
   const { hot, handlers } = usePick({ selectable, onPick });
   const docked = punt.status !== 'sailing';
+
+  // Sail in from the west harbour on mount, then follow every displayed change.
+  const motion = useWaypointMotion({ x: -2.6, z: LANE_Z[punt.route], ry: 0 });
+  const last = useRef<PuntState | null>(null);
+  const key = `${punt.status}:${punt.dock}:${punt.position}`;
+  useEffect(() => {
+    const prev = last.current;
+    last.current = punt;
+    if (!prev) {
+      const pose = puntPose(punt);
+      if (punt.status === 'sailing') motion.go([{ ...pose, ms: 500 + pose.x * 60 }]);
+      else motion.jump(pose);
+      return;
+    }
+    const path = puntPath(prev, punt);
+    if (path.length) motion.go(path);
+    else motion.jump(puntPose(punt));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
   useFrame(({ clock }) => {
-    if (!ref.current) return;
+    if (!bob.current) return;
     const t = clock.elapsedTime + bobPhase;
-    ref.current.position.y = docked ? 0 : Math.sin(t * 1.6) * 0.035;
-    ref.current.rotation.z = docked ? 0 : Math.sin(t * 1.1) * 0.025;
-    ref.current.rotation.x = docked ? 0 : Math.sin(t * 1.3 + 1) * 0.02;
+    bob.current.position.y = docked ? 0 : Math.sin(t * 1.6) * 0.035;
+    bob.current.rotation.z = docked ? 0 : Math.sin(t * 1.1) * 0.025;
+    bob.current.rotation.x = docked ? 0 : Math.sin(t * 1.3 + 1) * 0.02;
   });
   const seatX = puntSeatVoxelX(WARE_INFO[punt.ware].seatCosts.length);
   const deckY = PUNT_FLOAT_Y + PUNT_DECK_VOXELS * PROP_VOXEL;
   const nextFree = punt.seats.findIndex((s) => !s.occupant);
   return (
-    <group {...group}>
-      <group ref={ref} {...handlers}>
-        <VoxelMesh
-          model={`punt-${punt.ware}`}
-          build={() => puntModel(punt.ware)}
-          position-y={PUNT_FLOAT_Y}
-        />
-        {punt.seats.map((seat, i) =>
-          seat.occupant ? (
-            <Meeple
-              key={i}
-              color={colorOf(seat.occupant)}
-              pirate={seat.pirate}
-              position={[(Math.floor(seatX[i]!) + 0.5 - PUNT_LENGTH / 2) * PROP_VOXEL, deckY, 0]}
-            />
-          ) : null,
-        )}
-        {selectable && actorColor && nextFree >= 0 && (
-          <group
-            position={[
-              (Math.floor(seatX[nextFree]!) + 0.5 - PUNT_LENGTH / 2) * PROP_VOXEL,
-              deckY - 0.3,
-              0,
-            ]}
-          >
-            <Marker color={actorColor} hot={hot} />
-          </group>
-        )}
+    <group ref={motion.ref}>
+      <group {...group}>
+        <group ref={bob} {...handlers}>
+          <VoxelMesh
+            model={`punt-${punt.ware}`}
+            build={() => puntModel(punt.ware)}
+            position-y={PUNT_FLOAT_Y}
+          />
+          {punt.seats.map((seat, i) =>
+            seat.occupant ? (
+              <Meeple
+                key={`${i}-${seat.occupant}`}
+                color={colorOf(seat.occupant)}
+                pirate={seat.pirate}
+                position={[(Math.floor(seatX[i]!) + 0.5 - PUNT_LENGTH / 2) * PROP_VOXEL, deckY, 0]}
+              />
+            ) : null,
+          )}
+          {selectable && actorColor && nextFree >= 0 && (
+            <group
+              position={[
+                (Math.floor(seatX[nextFree]!) + 0.5 - PUNT_LENGTH / 2) * PROP_VOXEL,
+                deckY - 0.3,
+                0,
+              ]}
+            >
+              <Marker color={actorColor} hot={hot} />
+            </group>
+          )}
+        </group>
       </group>
     </group>
   );

@@ -10,35 +10,23 @@ import {
   type PlacementTarget,
   type PlayerColor,
   type PlayerView,
-  type PuntState,
 } from '@manila/engine';
-import { legalActionsFor, useGame, useView } from '../game/store';
+import { legalActionsFor, useCurtain, useGame, useView } from '../game/store';
 import {
   HARBOR_OFFICE,
   INSURANCE_STAND,
-  LANE_Z,
   PILOT_BOAT,
   PIRATE_SHIP,
-  PORT_BERTH,
   PORT_STAND,
-  SHIPYARD_SLIP,
   SHIPYARD_STAND,
-  spaceX,
 } from './layout';
+import { Dice } from './Dice';
 import { signModel, towerModel } from './models';
 import { ENV, PLAYER_COLORS } from './palette';
 import { PIECE_SCALE } from './layout';
 import { Punt, Stand } from './Pieces';
 import { surfaceY } from './terrain';
 import { VoxelMesh } from './VoxelMesh';
-
-/** Where a punt sits for its current status. Returns [x, z, rotationY]. */
-function puntTransform(p: PuntState): [number, number, number] {
-  if (p.status === 'port' && p.dock) return [PORT_BERTH[p.dock][0], PORT_BERTH[p.dock][1], 0];
-  if (p.status === 'shipyard' && p.dock)
-    return [SHIPYARD_SLIP[p.dock][0], SHIPYARD_SLIP[p.dock][1] - 0.3, Math.PI / 2];
-  return [spaceX(Math.min(p.position, 13)), LANE_Z[p.route], 0];
-}
 
 /**
  * Which placement targets the acting player may pick.
@@ -73,7 +61,10 @@ function useSelectableTargets(view: PlayerView): Set<string> {
 export function Board() {
   const view = useView();
   const dispatch = useGame((s) => s.dispatch);
-  const selectable = useSelectableTargets(view);
+  const playing = useGame((s) => s.playing);
+  const curtain = useCurtain();
+  const selectableAll = useSelectableTargets(view);
+  const selectable = playing || curtain ? new Set<string>() : selectableAll;
   const colors = useMemo(
     () =>
       Object.fromEntries(view.players.map((p) => [p.id, p.color])) as Record<string, PlayerColor>,
@@ -92,21 +83,17 @@ export function Board() {
 
   return (
     <group>
-      {view.punts.map((p, i) => {
-        const [x, z, ry] = puntTransform(p);
-        return (
-          <Punt
-            key={p.ware}
-            punt={p}
-            colorOf={(id) => colors[id]!}
-            bobPhase={i * 1.7}
-            position={[x, 0, z]}
-            rotation-y={ry}
-            scale={PIECE_SCALE.punt}
-            {...pick({ kind: 'punt', ware: p.ware })}
-          />
-        );
-      })}
+      {view.punts.map((p, i) => (
+        <Punt
+          key={`${view.voyage}-${p.ware}`}
+          punt={p}
+          colorOf={(id) => colors[id]!}
+          bobPhase={i * 1.7}
+          scale={PIECE_SCALE.punt}
+          {...(p.status === 'sailing' ? pick({ kind: 'punt', ware: p.ware }) : {})}
+        />
+      ))}
+      <Dice />
 
       {DOCK_SLOTS.map((slot) => {
         const [px, pz] = PORT_STAND[slot];

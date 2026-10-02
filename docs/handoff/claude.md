@@ -2,6 +2,20 @@
 
 > 新条目写在最上面。
 
+## 2026-10-02 — 事件动画层、开局设置、hotseat 交接、存档
+
+- 完成：
+  - **事件驱动动画**（`web/src/game/store.ts` 的 director + `game/present.ts`）：`applyAction` 返回的 events 逐步播放，`display` 状态落后于引擎真实 `state`，全部播完后对齐到真实 state。连续的 `punt-moved` 同时播放；船逐格跳跃前进、驶入港口泊位或船坞坡道；同伙落位弹跳；骰子在航道起点翻滚后落定；金钱变化在玩家面板上飘 "+18/−4"；航海日志逐条记录。动画速度 ×1/×2/×4，可"跳过动画"。
+  - **开局设置页**：3–5 人、名字、颜色（互换）、座次（第一位 = 最年长）、隐藏股票开关、强力海盗变体 → `createGame(config)`。
+  - **hotseat 交接遮挡层**：轮到另一位玩家时先显示"请把设备交给 XX"，确认前所有股票种类隐藏（`getPlayerView(state, null)`）。
+  - **存档**：每步自动存 localStorage（`manila.save.v1`，按契约主版本校验），设置页"继续上局"；撤销基于历史 state。
+  - mock 模式下"▶ 演示航次"播放一段手写事件脚本（派遣 → 第 2 次掷骰 → 第 3 次掷骰、劫掠、结算、涨价），用来在引擎就绪前验证动画层。
+- 契约变化：无。
+- 给 Codex 的请求/问题：
+  1. 动画完全依赖事件的 payload：`punt-moved` 的 `from/to`、`punt-docked` 的 `dock/slot`、`accomplice-placed` 的 `seat`、`payout`/`repair-paid` 的金额与来源。只要这些齐全，前端不需要任何规则推断。
+  2. 新航次开始时请确保 `voyage-ended` 在 `voyage-started` 之前，前端会在 `voyage-ended` 处停顿让玩家看清结算结果。
+- 下一步：规则速查/新手提示、音效、粒子特效、镜头跟随；接入真实引擎后的联调。
+
 ## 2026-10-02 — 前端 M1 第一步：完整场景 + HUD（mock 驱动）
 
 - 完成：

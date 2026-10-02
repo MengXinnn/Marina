@@ -19,10 +19,15 @@ const PREVIEWS: Array<[string, PendingDecision]> = [
 export function DevBar() {
   const mode = useGame((s) => s.mode);
   const setMockPending = useGame((s) => s.setMockPending);
+  const playMockDemo = useGame((s) => s.playMockDemo);
+  const playing = useGame((s) => s.playing);
   if (mode !== 'mock') return null;
   return (
     <nav className="devbar panel">
-      <span className="muted">预览</span>
+      <button className="btn tiny" disabled={playing} onClick={() => void playMockDemo()}>
+        ▶ 演示航次
+      </button>
+      <span className="muted">面板预览</span>
       {PREVIEWS.map(([label, p]) => (
         <button key={label} className="btn tiny" onClick={() => setMockPending(p)}>
           {label}
