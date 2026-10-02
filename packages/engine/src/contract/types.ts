@@ -14,7 +14,7 @@
  *   - Rule references like (R4.2) point to docs/RULES.md.
  */
 
-export const CONTRACT_VERSION = '0.1.0';
+export const CONTRACT_VERSION = '0.2.0';
 
 // ───────────────────────────── primitives ─────────────────────────────
 
@@ -45,7 +45,8 @@ export interface RuleOptions {
 export interface GameConfig {
   /** 3–5 players, in clockwise seating order. players[0] is the "oldest player" who opens voyage 1's auction. */
   players: PlayerSetup[];
-  /** RNG seed for share dealing + dice. Omit for a random seed. */
+  /** RNG seed for share dealing + dice. Omit for deterministic seed 0.
+   * Callers wanting fresh games generate a seed before calling the pure engine. */
   seed?: number;
   rules?: Partial<RuleOptions>;
   /** Test / demo hooks. Never used in normal play. */
