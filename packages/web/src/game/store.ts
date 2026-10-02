@@ -332,7 +332,8 @@ export const useGame = create<GameStore>((set, get) => {
         floaters: [],
         log: [{ id: nextId++, text: '—— 新游戏开始 ——' }],
         revealedFor: null,
-        bots,
+        // Bots only act through the real engine; in mock mode they would just "think" forever.
+        bots: mode === 'live' ? bots : {},
         notice: mode === 'mock' ? 'mock' : null,
       });
       if (mode === 'live') writeSave(state, bots);

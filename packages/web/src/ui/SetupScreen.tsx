@@ -191,7 +191,9 @@ export function SetupScreen() {
         </div>
         {rules && <RulesSheet onClose={() => setRules(false)} />}
         {mode === 'mock' && (
-          <p className="warn">规则引擎开发中：现在开始会进入固定的 4 人演示局。</p>
+          <p className="warn">
+            规则引擎开发中：现在开始会进入固定的 4 人演示局，电脑座位暂不生效。
+          </p>
         )}
       </div>
     </div>
