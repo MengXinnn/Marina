@@ -1,6 +1,8 @@
 import {
   CONTRACT_VERSION,
+  type GameEvent,
   type GameState,
+  type PendingDecision,
   type PlayerId,
   type PlayerView,
   type SeatState,
@@ -160,4 +162,102 @@ export function mockView(state: GameState, viewer: PlayerId | null): PlayerView 
       shares: p.shares.map((s) => ({ ...s, ware: p.id === viewer ? s.ware : null })),
     })),
   };
+}
+
+export interface DemoStep {
+  events: GameEvent[];
+  pending: PendingDecision;
+  pauseMs: number;
+}
+
+/**
+ * A scripted end of voyage 3 (from the mock snapshot) that exercises every animation:
+ * placement, a movement round, the final roll with docking, plunder, payouts, insurance,
+ * market rise. Event payloads are hand-written; nothing here is computed from rules.
+ */
+export function mockDemoScript(): DemoStep[] {
+  return [
+    {
+      events: [
+        {
+          type: 'accomplice-placed',
+          playerId: 'p3',
+          target: { kind: 'punt', ware: 'jade' },
+          seat: 1,
+          cost: 4,
+          blindPassenger: false,
+        },
+        {
+          type: 'accomplice-placed',
+          playerId: 'p4',
+          target: { kind: 'shipyard', slot: 'A' },
+          seat: null,
+          cost: 4,
+          blindPassenger: false,
+        },
+        {
+          type: 'accomplice-placed',
+          playerId: 'p1',
+          target: { kind: 'punt', ware: 'ginseng' },
+          seat: 0,
+          cost: 1,
+          blindPassenger: false,
+        },
+      ],
+      pending: { type: 'roll-dice', playerId: 'p2', round: 2 },
+      pauseMs: 500,
+    },
+    {
+      events: [
+        { type: 'dice-rolled', round: 2, values: { jade: 3, silk: 6, ginseng: 4 } },
+        { type: 'punt-moved', ware: 'jade', from: 7, to: 10, cause: 'dice' },
+        { type: 'punt-moved', ware: 'silk', from: 6, to: 12, cause: 'dice' },
+        { type: 'punt-moved', ware: 'ginseng', from: 10, to: 14, cause: 'dice' },
+        { type: 'punt-docked', ware: 'ginseng', dock: 'port', slot: 'A' },
+      ],
+      pending: { type: 'roll-dice', playerId: 'p2', round: 3 },
+      pauseMs: 700,
+    },
+    {
+      events: [
+        { type: 'dice-rolled', round: 3, values: { jade: 5, silk: 1 } },
+        { type: 'punt-moved', ware: 'jade', from: 10, to: 15, cause: 'dice' },
+        { type: 'punt-moved', ware: 'silk', from: 12, to: 13, cause: 'dice' },
+        { type: 'punt-docked', ware: 'jade', dock: 'port', slot: 'B' },
+        { type: 'punt-plundered', ware: 'silk', returned: ['p2'] },
+        {
+          type: 'payout',
+          playerId: 'p4',
+          amount: 30,
+          source: 'bank',
+          reason: 'plunder',
+          ware: 'silk',
+        },
+        { type: 'punt-docked', ware: 'silk', dock: 'shipyard', slot: 'A' },
+        {
+          type: 'payout',
+          playerId: 'p1',
+          amount: 18,
+          source: 'bank',
+          reason: 'cargo',
+          ware: 'ginseng',
+        },
+        {
+          type: 'payout',
+          playerId: 'p3',
+          amount: 36,
+          source: 'bank',
+          reason: 'cargo',
+          ware: 'jade',
+        },
+        { type: 'payout', playerId: 'p2', amount: 6, source: 'bank', reason: 'port', slot: 'A' },
+        { type: 'repair-paid', payer: 'p1', to: 'p4', amount: 6, slot: 'A' },
+        { type: 'market-rose', ware: 'ginseng', from: 5, to: 10 },
+        { type: 'market-rose', ware: 'jade', from: 5, to: 10 },
+        { type: 'voyage-ended', voyage: 3 },
+      ],
+      pending: { type: 'bid', playerId: 'p2', minBid: 1, maxBid: 54 },
+      pauseMs: 0,
+    },
+  ];
 }
