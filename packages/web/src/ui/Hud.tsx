@@ -109,7 +109,17 @@ export function WareChip({ ware, label }: { ware: Ware | null; label?: string })
   );
 }
 
-function PlayerCard({ p, active, hm }: { p: PlayerViewEntry; active: boolean; hm: boolean }) {
+function PlayerCard({
+  p,
+  active,
+  hm,
+  bot,
+}: {
+  p: PlayerViewEntry;
+  active: boolean;
+  hm: boolean;
+  bot: boolean;
+}) {
   const free = p.accomplices - p.accomplicesPlaced;
   return (
     <li
@@ -119,6 +129,7 @@ function PlayerCard({ p, active, hm }: { p: PlayerViewEntry; active: boolean; hm
       <div className="player-head">
         <span className="swatch" />
         <span className="name">{p.name}</span>
+        {bot && <span className="bot-tag">{zh.bot}</span>}
         {hm && (
           <span className="hm" title={zh.harborMaster}>
             港
@@ -188,11 +199,18 @@ function EventLog() {
 function PlayersPanel() {
   const view = useView();
   const actor = 'playerId' in view.pending ? view.pending.playerId : null;
+  const bots = useGame((s) => s.bots);
   return (
     <aside className="players panel">
       <ul>
         {view.players.map((p) => (
-          <PlayerCard key={p.id} p={p} active={p.id === actor} hm={p.id === view.harborMaster} />
+          <PlayerCard
+            key={p.id}
+            p={p}
+            active={p.id === actor}
+            hm={p.id === view.harborMaster}
+            bot={!!bots[p.id]}
+          />
         ))}
       </ul>
     </aside>

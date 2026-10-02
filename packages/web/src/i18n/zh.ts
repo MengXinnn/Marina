@@ -25,6 +25,9 @@ export const zh = {
   shares: '股票',
   accomplices: '同伙',
   mortgaged: '已抵押',
+  bot: '电脑',
+  botLevel: { easy: '简单', normal: '普通' } as const,
+  botThinking: (name: string) => `电脑 ${name} 正在思考……`,
   hidden: '暗股',
   market: '黑市行情',
   supply: '剩余股票',
@@ -39,6 +42,7 @@ export const zh = {
   notices: {
     mock: '当前为演示数据：规则引擎完成后即可真正游玩',
     'engine-pending': '规则引擎尚未就绪，这一步暂时无法执行',
+    'bot-error': '电脑玩家出错了，请手动继续或撤销',
   } as Record<string, string>,
   actions: {
     bid: '出价',

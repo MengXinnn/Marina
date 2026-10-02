@@ -24,6 +24,7 @@ export function ActionBar() {
   const playing = useGame((s) => s.playing);
   const skip = useGame((s) => s.skipAnimation);
   const curtain = useCurtain();
+  const bots = useGame((s) => s.bots);
   const pending = view.pending;
   if (playing)
     return (
@@ -39,6 +40,21 @@ export function ActionBar() {
   if (curtain) return null;
   const actor =
     'playerId' in pending ? view.players.find((p) => p.id === pending.playerId) : undefined;
+  if (actor && bots[actor.id])
+    return (
+      <footer className="actionbar panel">
+        <div
+          className="actor"
+          style={{ '--pc': PLAYER_COLORS[actor.color].css } as React.CSSProperties}
+        >
+          <span className="swatch" />
+          {actor.name}
+        </div>
+        <div className="action-body">
+          <p className="muted">{zh.botThinking(actor.name)}</p>
+        </div>
+      </footer>
+    );
   return (
     <footer className="actionbar panel" key={`${view.turn}-${pending.type}`}>
       {actor && (

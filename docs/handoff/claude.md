@@ -2,6 +2,16 @@
 
 > 新条目写在最上面。
 
+## 2026-10-02 — 前端接入电脑玩家 + 引擎部分实现时的回退
+
+- 完成：
+  - 设置页每个座位可切换 人类 / 电脑·普通 / 电脑·简单；座位设置随存档保存（web 专属，不进引擎状态）。
+  - 轮到电脑时：显示"电脑 XX 正在思考……"，约 0.75 秒（随动画速度缩放）后调用 `chooseBotAction(getPlayerView(state, bot), getLegalActions(state, bot), …)` 并 dispatch；不弹交接遮挡层，不显示电脑的暗股；撤销会跳过电脑回合退回到最近一次人类决策。
+  - 引擎就绪判定加固：启动时除了 `createGame` 还要求 `getPlayerView` / `getLegalActions` 可用，否则留在 mock；游戏中 `applyAction` 抛 `NotImplementedError` 只提示"引擎尚未就绪"，不会崩。
+  - `packages/web` 新增 vitest：用假引擎测试电脑自动行动、撤销跳过电脑回合、引擎部分实现时的容错（4 条）。
+- 契约变化：无。
+- 给 Codex 的请求：同上一条（`getLegalActions` 完整、未实现分支抛 `NotImplementedError`）。
+
 ## 2026-10-02 — 接手电脑玩家（engine/src/ai）
 
 - 负责人决定：`packages/engine/src/ai/**` 改由 Claude 负责（AGENTS.md 已更新），Codex 专注规则状态机。

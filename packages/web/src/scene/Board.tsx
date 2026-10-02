@@ -64,7 +64,9 @@ export function Board() {
   const playing = useGame((s) => s.playing);
   const curtain = useCurtain();
   const selectableAll = useSelectableTargets(view);
-  const selectable = playing || curtain ? new Set<string>() : selectableAll;
+  const bots = useGame((s) => s.bots);
+  const botTurn = 'playerId' in view.pending && !!bots[view.pending.playerId];
+  const selectable = playing || curtain || botTurn ? new Set<string>() : selectableAll;
   const colors = useMemo(
     () =>
       Object.fromEntries(view.players.map((p) => [p.id, p.color])) as Record<string, PlayerColor>,
