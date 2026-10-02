@@ -71,8 +71,7 @@ function validate(config: GameConfig): void {
 export function initialState(input: GameConfig): GameState {
   validate(input);
   const config = copy(input);
-  // TODO(ruling): no entropy outside state.rng; callers wanting a fresh game should
-  // supply a seed. RULES R1.6 takes precedence over the config comment's random default.
+  // R1.6 / contract v0.2.0: entropy belongs to the caller; omitted seed means 0.
   const seed = (config.seed ?? 0) >>> 0;
   const rng = { seed, state: seed, debugDiceUsed: 0 };
   const pool = WARES.flatMap((ware) => Array<Ware>(DEAL_POOL_PER_WARE).fill(ware));

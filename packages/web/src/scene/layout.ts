@@ -56,6 +56,8 @@ export const SHIPYARD_SLIP: Record<DockSlot, [number, number]> = {
   B: [11.0, 6.8],
   C: [14.0, 6.8],
 };
+/** Water channel south of the routes that punts follow to reach the shipyard. */
+export const SHIPYARD_CHANNEL_Z = 4.4;
 export const SHIPYARD_STAND: Record<DockSlot, [number, number]> = {
   A: [9.25, 7.6],
   B: [12.25, 7.6],

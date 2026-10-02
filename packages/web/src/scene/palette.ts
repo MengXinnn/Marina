@@ -49,6 +49,9 @@ export const ENV = {
   pirateSail: 0x26262c,
   pirateHull: 0x3a2a24,
   danger: 0xd8433a,
+  /** Die pips: dark on light dice, light on the dark nutmeg die. */
+  pipDark: 0x1d1d22,
+  pipLight: 0xf6ead2,
   leaf: 0x3fa34d,
   leafDark: 0x2b7a3a,
   trunk: 0x8a5a32,

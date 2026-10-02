@@ -382,3 +382,74 @@ function copyInto(dst: VoxelGrid, src: VoxelGrid, ox: number, oy: number, oz: nu
       for (let x = 0; x < src.w; x++)
         if (src.filled(x, y, z)) dst.set(x + ox, y + oy, z + oz, src.color(x, y, z));
 }
+
+// ───────────────────────────── dice ─────────────────────────────
+
+const PIPS: Record<number, Array<[number, number]>> = {
+  1: [[3, 3]],
+  2: [
+    [1, 1],
+    [5, 5],
+  ],
+  3: [
+    [1, 1],
+    [3, 3],
+    [5, 5],
+  ],
+  4: [
+    [1, 1],
+    [1, 5],
+    [5, 1],
+    [5, 5],
+  ],
+  5: [
+    [1, 1],
+    [1, 5],
+    [3, 3],
+    [5, 1],
+    [5, 5],
+  ],
+  6: [
+    [1, 1],
+    [1, 3],
+    [1, 5],
+    [5, 1],
+    [5, 3],
+    [5, 5],
+  ],
+};
+
+/** 7³ die in the ware's colour. Faces: +y 1, −y 6, +x 2, −x 5, +z 3, −z 4 (see DIE_TOP_ROTATION). */
+export function dieModel(color: number, pip: number): VoxelGrid {
+  const g = new VoxelGrid(7, 7, 7);
+  g.box(0, 0, 0, 6, 6, 6, (x, y, z) => {
+    const edges = [x === 0 || x === 6, y === 0 || y === 6, z === 0 || z === 6].filter(
+      Boolean,
+    ).length;
+    return edges === 3 ? null : color;
+  });
+  const face: Record<number, (u: number, v: number) => [number, number, number]> = {
+    1: (u, v) => [u, 6, v],
+    6: (u, v) => [u, 0, v],
+    2: (u, v) => [6, u, v],
+    5: (u, v) => [0, u, v],
+    3: (u, v) => [u, v, 6],
+    4: (u, v) => [u, v, 0],
+  };
+  for (let n = 1; n <= 6; n++)
+    for (const [u, v] of PIPS[n]!) {
+      const [x, y, z] = face[n]!(u, v);
+      g.set(x, y, z, pip);
+    }
+  return g;
+}
+
+/** Euler rotation that brings face `n` of dieModel to the top. */
+export const DIE_TOP_ROTATION: Record<number, [number, number, number]> = {
+  1: [0, 0, 0],
+  2: [0, 0, Math.PI / 2],
+  3: [-Math.PI / 2, 0, 0],
+  4: [Math.PI / 2, 0, 0],
+  5: [0, 0, -Math.PI / 2],
+  6: [Math.PI, 0, 0],
+};
