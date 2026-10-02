@@ -10,14 +10,15 @@ export interface PuntOutlook {
   fail: number;
 }
 
-const cache = new Map<string, PuntOutlook>();
+const ARRIVED: Readonly<PuntOutlook> = Object.freeze({ arrive: 1, on13: 0, fail: 0 });
+const cache = new Map<string, Readonly<PuntOutlook>>();
 
 /**
  * Exact distribution by dynamic programming over positions 0..13 with an absorbing
  * "arrived" state (surplus movement is lost, R5.8). `rolls` = movement rounds still to come.
  */
-export function outlook(position: number, rolls: number): PuntOutlook {
-  if (position > LAST_SPACE) return { arrive: 1, on13: 0, fail: 0 };
+export function outlook(position: number, rolls: number): Readonly<PuntOutlook> {
+  if (position > LAST_SPACE) return ARRIVED;
   const key = `${position}:${rolls}`;
   const hit = cache.get(key);
   if (hit) return hit;
@@ -39,7 +40,8 @@ export function outlook(position: number, rolls: number): PuntOutlook {
     dist = next;
   }
   const on13 = dist[LAST_SPACE]!;
-  const result = { arrive: arrived, on13, fail: Math.max(0, 1 - arrived - on13) };
+  // Frozen: results are cached and shared, so callers must not be able to mutate them.
+  const result = Object.freeze({ arrive: arrived, on13, fail: Math.max(0, 1 - arrived - on13) });
   cache.set(key, result);
   return result;
 }

@@ -259,9 +259,12 @@ function decidePlacement(
 function scoreBoard(view: PlayerView, me: PlayerId, a: Of<'pirate-board'>): number {
   if (!a.ware) return stakeValue(view, me);
   const v = cloneView(view);
-  const seat = v.punts.find((p) => p.ware === a.ware)?.seats.find((s) => !s.occupant);
+  const seats = v.punts.find((p) => p.ware === a.ware)?.seats ?? [];
+  // R10 variant: the engine names the seat to take over; otherwise the cheapest vacant one.
+  const seat =
+    a.displaceSeat !== undefined ? seats[a.displaceSeat] : seats.find((s) => !s.occupant);
   if (!seat) return -Infinity;
-  Object.assign(seat, { occupant: me, pirate: true });
+  Object.assign(seat, { occupant: me, pirate: true, blindPassenger: false });
   // R6.2: leaving the pirate ship; the crew is promoted when the captain boards.
   if (v.pirates.captain === me) v.pirates = { captain: v.pirates.crew, crew: null };
   else if (v.pirates.crew === me) v.pirates.crew = null;

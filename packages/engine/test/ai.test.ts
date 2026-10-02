@@ -211,6 +211,31 @@ describe('ai/chooseBotAction', () => {
     expect(bot(v, legal)).toEqual(legal[0]);
   });
 
+  it('uses the strong-pirate variant to displace onto a full punt (R10)', () => {
+    const v = view({
+      pending: { type: 'pirate-board', playerId: 'p1', role: 'captain', candidates: ['silk'] },
+      phase: 'pirates',
+      movementRound: 2,
+      config: { players: [], rules: { pirateDisplace: true } },
+      pirates: { captain: 'p1', crew: null },
+      punts: [punt('ginseng', 0, 9), punt('silk', 1, 13, ['p2', 'p3', 'p4']), punt('jade', 2, 6)],
+    });
+    const legal: Action[] = [
+      { type: 'pirate-board', playerId: 'p1', ware: 'silk', displaceSeat: 2 },
+      { type: 'pirate-board', playerId: 'p1', ware: null },
+    ];
+    expect(bot(v, legal)).toEqual(legal[0]);
+  });
+
+  it('returns cached outlooks that callers cannot corrupt', () => {
+    const o = outlook(9, 2);
+    expect(Object.isFrozen(o)).toBe(true);
+    expect(() => {
+      (o as { arrive: number }).arrive = 99;
+    }).toThrow();
+    expect(outlook(9, 2).arrive).toBeLessThan(1);
+  });
+
   it('uses the large pilot to push its own punt past 13 (R7.3)', () => {
     const v = view({
       pending: { type: 'pilot', playerId: 'p1', size: 'large' },
