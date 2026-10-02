@@ -26,7 +26,7 @@
 - 契约 `src/contract/*` 是共同所有：如果实现中发现契约需要调整（字段、pending、事件），单独开一个标题以 `[contract]` 开头的小 PR，bump `CONTRACT_VERSION`，在 `docs/CONTRACT.md` 的 Changelog 写明原因；越早提越好，前端正在照着它开发。
 - 规则有疑问：按 `docs/RULES.md` 实现；RULES 没写清的，在 `docs/handoff/codex.md` 里提问并先选一个合理做法、在代码注释中标注 `TODO(ruling)`。
 - 引擎不新增运行时依赖。
-- 从仓库默认分支（目前是 `claude/manila-game-web-app-e9oz6i`，之后若出现 `main` 则以 `main` 为准）拉出分支 `codex/engine-core`，小步提交，完成后开 PR 合回默认分支。
+- 从 `main` 拉出分支 `codex/engine-core`，小步提交，完成后开 PR 合回 `main`。
 - 提交前运行 `npm install && npm run check`（格式 + 类型检查 + 测试 + 构建）必须全部通过；可用 `npm run format` 自动格式化。
 - 每次工作结束，在 `docs/handoff/codex.md` **顶部**追加交接条目：完成了什么、契约变化、已知问题、给 Claude 的请求、下一步。
 
