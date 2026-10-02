@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { isMuted, setMuted } from '../audio/sfx';
 import { MARKET_TRACK, WARES, type PlayerViewEntry, type Ware } from '@manila/engine';
 import { zh } from '../i18n/zh';
 import { useGame, useView } from '../game/store';
@@ -6,6 +7,7 @@ import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';
 import { ActionBar } from './ActionBar';
 import { Curtain } from './Curtain';
 import { DevBar } from './DevBar';
+import { RulesSheet } from './RulesSheet';
 
 export function Hud() {
   return (
@@ -47,12 +49,28 @@ function TopBar() {
 }
 
 function GameControls() {
+  const [rules, setRules] = useState(false);
+  const [mute, setMute] = useState(isMuted);
   const settings = useGame((s) => s.settings);
   const setSettings = useGame((s) => s.setSettings);
   const backToSetup = useGame((s) => s.backToSetup);
   const nextSpeed = ({ 1: 2, 2: 4, 4: 1 } as const)[settings.speed];
   return (
     <span className="controls">
+      <button className="btn tiny ghost" onClick={() => setRules(true)}>
+        规则
+      </button>
+      <button
+        className="btn tiny ghost"
+        title={mute ? '打开音效' : '关闭音效'}
+        onClick={() => {
+          setMuted(!mute);
+          setMute(!mute);
+        }}
+      >
+        {mute ? '静音' : '音效'}
+      </button>
+      {rules && <RulesSheet onClose={() => setRules(false)} />}
       <button
         className="btn tiny ghost"
         title="动画速度"

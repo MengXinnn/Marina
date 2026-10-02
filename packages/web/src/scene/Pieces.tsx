@@ -14,6 +14,7 @@ import {
   SHIPYARD_SLIP,
   spaceX,
 } from './layout';
+import { ANIM_MS } from '../game/store';
 import { useDropIn, useWaypointMotion, type Pose, type Waypoint } from './motion';
 import {
   PUNT_DECK_VOXELS,
@@ -151,7 +152,7 @@ function puntPath(prev: PuntState, next: PuntState): Waypoint[] {
     const target = next.status === 'sailing' ? next.position : prev.position;
     const dir = Math.sign(target - prev.position);
     for (let i = prev.position + dir; dir !== 0 && i !== target + dir; i += dir)
-      path.push({ x: spaceX(Math.min(i, 14)), z, ry: 0, ms: HOP_MS, hop: true });
+      path.push({ x: spaceX(Math.min(i, 14)), z, ry: 0, ms: ANIM_MS.hop, hop: true });
   } else if (next.status === 'sailing') {
     return []; // new voyage: handled by a jump
   }
@@ -168,8 +169,6 @@ function puntPath(prev: PuntState, next: PuntState): Waypoint[] {
   }
   return path;
 }
-
-const HOP_MS = 240;
 
 /** A loaded punt with its cargo and the accomplices aboard. */
 export function Punt({

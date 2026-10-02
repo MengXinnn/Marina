@@ -4,6 +4,7 @@ import { zh } from '../i18n/zh';
 import { useGame } from '../game/store';
 import { hasSave } from '../game/save';
 import { PLAYER_COLORS } from '../scene/palette';
+import { RulesSheet } from './RulesSheet';
 
 const COLORS: PlayerColor[] = ['red', 'blue', 'orange', 'purple', 'white'];
 const DEFAULT_NAMES = ['小红', '阿蓝', '橙子', '紫苏', '小白'];
@@ -19,6 +20,7 @@ export function SetupScreen() {
   const resumeSaved = useGame((s) => s.resumeSaved);
   const [players, setPlayers] = useState<PlayerSetup[]>(() => freshPlayers(4));
   const [pirateDisplace, setPirateDisplace] = useState(false);
+  const [rules, setRules] = useState(false);
   const canResume = mode === 'live' && hasSave();
 
   const update = (i: number, patch: Partial<PlayerSetup>) =>
@@ -152,12 +154,16 @@ export function SetupScreen() {
           >
             开始游戏
           </button>
+          <button className="btn ghost" onClick={() => setRules(true)}>
+            规则速查
+          </button>
           {canResume && (
             <button className="btn ghost" onClick={() => resumeSaved()}>
               继续上局
             </button>
           )}
         </div>
+        {rules && <RulesSheet onClose={() => setRules(false)} />}
         {mode === 'mock' && (
           <p className="warn">规则引擎开发中：现在开始会进入固定的 4 人演示局。</p>
         )}

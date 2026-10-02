@@ -16,6 +16,7 @@ import {
   type PlayerView,
   type Ware,
 } from '@manila/engine';
+import { playStep } from '../audio/sfx';
 import { describeEvent } from '../i18n/zh';
 import { createMockState, mockDemoScript, mockView } from './mock';
 import { patchDisplay } from './present';
@@ -104,7 +105,8 @@ const initial = boot();
 
 // ───────────── animation timing ─────────────
 
-const MS = {
+/** Animation timings (ms at speed ×1). Scene components use the same values to stay in sync. */
+export const ANIM_MS = {
   hop: 260,
   dice: 1500,
   dock: 650,
@@ -135,32 +137,32 @@ function stepDuration(step: GameEvent[]): number {
     case 'punt-moved':
       return (
         Math.max(...step.map((m) => (m.type === 'punt-moved' ? Math.abs(m.to - m.from) : 0))) *
-          MS.hop +
+          ANIM_MS.hop +
         150
       );
     case 'dice-rolled':
-      return MS.dice;
+      return ANIM_MS.dice;
     case 'punt-docked':
-      return MS.dock;
+      return ANIM_MS.dock;
     case 'accomplice-placed':
-      return MS.place;
+      return ANIM_MS.place;
     case 'payout':
     case 'repair-paid':
     case 'loan-taken':
     case 'loan-repaid':
-      return MS.money;
+      return ANIM_MS.money;
     case 'market-rose':
-      return MS.market;
+      return ANIM_MS.market;
     case 'voyage-ended':
-      return MS.voyageEnd;
+      return ANIM_MS.voyageEnd;
     case 'punt-plundered':
-      return MS.plunder;
+      return ANIM_MS.plunder;
     case 'pirate-boarded':
-      return MS.board;
+      return ANIM_MS.board;
     case 'punts-loaded':
-      return MS.load;
+      return ANIM_MS.load;
     default:
-      return MS.other;
+      return ANIM_MS.other;
   }
 }
 
@@ -243,7 +245,11 @@ export const useGame = create<GameStore>((set, get) => {
           1600,
         );
       }
-      if (!cancelled()) await wait(stepDuration(step) / get().settings.speed, cancelled);
+      if (!cancelled()) {
+        const speed = get().settings.speed;
+        playStep(step, ANIM_MS.hop / speed);
+        await wait(stepDuration(step) / speed, cancelled);
+      }
     }
     if (token !== runToken) return;
     set({ display: finalState, playing: false, skip: false, dice: null });
