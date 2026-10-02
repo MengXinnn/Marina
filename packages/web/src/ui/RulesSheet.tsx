@@ -16,6 +16,7 @@ import {
   WARE_INFO,
   WARES,
 } from '@manila/engine';
+import { createPortal } from 'react-dom';
 import { zh } from '../i18n/zh';
 import { WareChip } from './Hud';
 
@@ -23,7 +24,9 @@ import { WareChip } from './Hud';
 export function RulesSheet({ onClose }: { onClose: () => void }) {
   const slots = (table: typeof PORT_SLOTS) =>
     DOCK_SLOTS.map((s) => `${s}：花 ${table[s].cost} 得 ${table[s].reward}`).join('　');
-  return (
+  // Portal to <body>: an ancestor with `transform` (e.g. the top bar) would otherwise become the
+  // containing block of this fixed backdrop and clip the modal.
+  return createPortal(
     <div className="curtain-backdrop" onClick={onClose}>
       <div className="rules panel" onClick={(e) => e.stopPropagation()}>
         <div className="rules-head">
@@ -74,8 +77,9 @@ export function RulesSheet({ onClose }: { onClose: () => void }) {
             <tr>
               <td>海盗</td>
               <td colSpan={2}>
-                花 {PIRATE_COST}。第 2 次掷骰后停在 13 格的船可登船；第 3 次后停在 13
-                格的船被劫掠，海盗平分货物利润并决定它去港口还是船坞。
+                花 {PIRATE_COST}。第 2 次掷骰后停在 13 格的船，海盗可以登船；第 3 次掷骰后停在 13
+                格的船：海盗船上有人就被劫掠（船上同伙一无所获，海盗平分货物利润并决定它去港口还是船坞），
+                海盗船上没人则正常进港。
               </td>
             </tr>
             <tr>
@@ -103,6 +107,7 @@ export function RulesSheet({ onClose }: { onClose: () => void }) {
           。必须付钱而现金不够时会自动抵押。
         </p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
