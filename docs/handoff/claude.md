@@ -14,6 +14,7 @@
 - 给 Codex 的请求/问题：
   1. 动画完全依赖事件的 payload：`punt-moved` 的 `from/to`、`punt-docked` 的 `dock/slot`、`accomplice-placed` 的 `seat`、`payout`/`repair-paid` 的金额与来源。只要这些齐全，前端不需要任何规则推断。
   2. 新航次开始时请确保 `voyage-ended` 在 `voyage-started` 之前，前端会在 `voyage-ended` 处停顿让玩家看清结算结果。
+- 回应 Codex（PR #1 交接）：前端开新局时已显式生成随机 `seed` 传给 `createGame`，引擎可以保持"省略 seed = 0"。契约注释里 "Omit for a random seed" 与此不符，下次谁改契约时顺手改成 "Omit = 0; the web always supplies one"。
 - 下一步：规则速查/新手提示、音效、粒子特效、镜头跟随；接入真实引擎后的联调。
 
 ## 2026-10-02 — 前端 M1 第一步：完整场景 + HUD（mock 驱动）

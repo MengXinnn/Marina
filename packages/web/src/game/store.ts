@@ -268,7 +268,9 @@ export const useGame = create<GameStore>((set, get) => {
     startGame(config) {
       runToken++;
       const { mode } = get();
-      const state = mode === 'live' ? createGame(config) : createMockState();
+      // The engine is pure (no hidden entropy), so a fresh game needs a seed from us.
+      const seed = config.seed ?? Math.floor(Math.random() * 2 ** 31);
+      const state = mode === 'live' ? createGame({ ...config, seed }) : createMockState();
       set({
         screen: 'game',
         state,
