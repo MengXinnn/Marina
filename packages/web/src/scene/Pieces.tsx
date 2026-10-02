@@ -10,6 +10,7 @@ import {
   PORT_BERTH,
   PROP_VOXEL,
   PUNT_FLOAT_Y,
+  SHIPYARD_CHANNEL_Z,
   SHIPYARD_SLIP,
   spaceX,
 } from './layout';
@@ -141,9 +142,6 @@ export function puntPose(p: PuntState): Pose {
     return { x: SHIPYARD_SLIP[p.dock][0], z: SHIPYARD_SLIP[p.dock][1] - 0.2, ry: -Math.PI / 2 };
   return { x: spaceX(Math.min(p.position, 14)), z: LANE_Z[p.route], ry: 0 };
 }
-
-/** Channel south of the routes used to reach the shipyard. */
-const SHIPYARD_CHANNEL_Z = 4.4;
 
 /** Waypoints from one displayed punt state to the next. */
 function puntPath(prev: PuntState, next: PuntState): Waypoint[] {

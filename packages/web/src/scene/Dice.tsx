@@ -5,7 +5,7 @@ import { WARES, type Ware } from '@manila/engine';
 import { useGame } from '../game/store';
 import { LANE_Z, spaceX } from './layout';
 import { DIE_TOP_ROTATION, dieModel } from './models';
-import { WARE_COLORS } from './palette';
+import { ENV, WARE_COLORS } from './palette';
 import { VoxelMesh } from './VoxelMesh';
 
 const TUMBLE_S = 0.9;
@@ -81,7 +81,7 @@ function Die({
       <group ref={ref}>
         <VoxelMesh
           model={`die-${ware}`}
-          build={() => dieModel(c.main, ware === 'nutmeg' ? 0xf6ead2 : 0x1d1d22)}
+          build={() => dieModel(c.main, ware === 'nutmeg' ? ENV.pipLight : ENV.pipDark)}
           position-y={-0.35}
         />
       </group>
