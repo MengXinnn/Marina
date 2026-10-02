@@ -93,7 +93,8 @@ export function settleMoney(state: GameState, events: GameEvent[]): void {
 
   // R8.5 collect all own profits before repairs. A payment to oneself is net zero,
   // even if cash is zero; it never forces a loan or creates bank subsidy.
-  // Each actual funding leg has its own payout/repair-paid, so bankruptcy is visible.
+  // Each funding leg emits exactly one transfer: payout to a player, otherwise
+  // repair-paid to the bank. Emitting both would double-charge event consumers.
   const repairs: GameEvent[] = [];
   for (const slot of DOCK_SLOTS) {
     const space = state.shipyard[slot];
@@ -110,7 +111,6 @@ export function settleMoney(state: GameState, events: GameEvent[]): void {
         reason: 'shipyard',
         slot,
       });
-      repairs.push({ type: 'repair-paid', payer: insurer.id, to, amount, slot });
       continue;
     }
     if (insurer) finance(state, insurer, amount, events);
@@ -131,8 +131,9 @@ export function settleMoney(state: GameState, events: GameEvent[]): void {
           reason: 'shipyard',
           slot,
         });
+      } else {
+        repairs.push({ type: 'repair-paid', payer, to, amount: portion, slot });
       }
-      repairs.push({ type: 'repair-paid', payer, to, amount: portion, slot });
     }
   }
   // CONTRACT: all shipyard payouts precede repair animations.

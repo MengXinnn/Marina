@@ -112,7 +112,7 @@ describe('rule boundary regressions', () => {
     expect(state.players[0].cash).toBe(0);
   });
 
-  it('R8.5 self-insurance costs net zero, emits both events, and never takes a loan', () => {
+  it('R8.5 self-insurance costs net zero, emits one transfer, and never takes a loan', () => {
     const state = finalRoll({ ginseng: 1, nutmeg: 6, silk: 6 });
     state.punts[1].position = state.punts[2].position = 10;
     state.insurance = state.shipyard.A.occupant = 'p1';
@@ -128,13 +128,7 @@ describe('rule boundary regressions', () => {
       reason: 'shipyard',
       slot: 'A',
     });
-    expect(result.events).toContainEqual({
-      type: 'repair-paid',
-      payer: 'p1',
-      to: 'p1',
-      amount: 6,
-      slot: 'A',
-    });
+    expect(result.events.some((e) => e.type === 'repair-paid' && e.slot === 'A')).toBe(false);
   });
 
   it('R5.8/R7.1 early arrivals neither move again nor allow pilots to act when all arrived', () => {

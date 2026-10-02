@@ -567,6 +567,10 @@ describe('R8 money', () => {
     ).toEqual([
       ['p1', 'bank', 6],
       ['p1', 'bank', 8],
+    ]);
+    expect(
+      result.events.filter((e) => e.type === 'payout').map((e) => [e.source, e.playerId, e.amount]),
+    ).toEqual([
       ['p1', 'p2', 10],
       ['bank', 'p2', 5],
     ]);

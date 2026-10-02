@@ -31,8 +31,8 @@ states. `replay(config, actions)` returns events grouped by action for animation
 `test/scenarios.ts` discovers every JSON file, replays it twice and checks dot-path
 expectations; `test/fixtures.test.ts` additionally checks the promised event beats.
 
-For bankruptcy a repair can produce two funding legs: a player-funded portion
-and a bank-funded remainder, each with its own `repair-paid` and (when the
-recipient is a player) `payout`. A payout announces receipt; the matching
-`repair-paid` announces the payer's debit. These describe the same transfer.
-An insurer paying itself emits both events and has zero net cash change.
+Each funding leg emits exactly one transfer event: `payout` when a player
+receives the money, or `repair-paid` when the bank receives it. Apply the event's
+full debit and credit once. Bankruptcy can split a payment into an insurer-funded
+portion and a bank-funded remainder. An insurer paying itself emits one `payout`
+with matching source/recipient and zero net cash change.
