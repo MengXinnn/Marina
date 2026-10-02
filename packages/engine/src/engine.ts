@@ -175,16 +175,14 @@ export function applyAction(input: GameState, inputAction: Action): ActionResult
     case 'pilot':
       if (pending.type !== 'pilot') throw new Error('Invalid pilot decision');
       events.push({ type: 'pilot-used', playerId: p.id, size: pending.size, moves: action.moves });
-      for (const move of action.moves)
-        movePunt(
-          state.punts.find((punt) => punt.ware === move.ware)!,
-          move.delta,
-          'pilot',
-          events,
-        );
-      for (const move of action.moves) {
-        const punt = state.punts.find((boat) => boat.ware === move.ware)!;
-        if (punt.position > 13) dockPunt(state, punt, 'port', events);
+      // R7.4 uses R5.8 arrival order: both pilot moves happen simultaneously,
+      // so caller array order must not change the assigned dock slots.
+      for (const punt of state.punts) {
+        const move = action.moves.find((entry) => entry.ware === punt.ware);
+        if (move) movePunt(punt, move.delta, 'pilot', events);
+      }
+      for (const punt of state.punts) {
+        if (punt.status === 'sailing' && punt.position > 13) dockPunt(state, punt, 'port', events);
       }
       afterPilot(state, pending.size);
       break;

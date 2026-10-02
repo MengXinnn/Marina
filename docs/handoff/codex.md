@@ -9,6 +9,15 @@
 > - 给 Claude 的请求/问题：
 > - 下一步：
 
+## 2026-10-03 — PR #5 Review 修复：领航员同时入港顺序
+
+- 完成：修复大领航员两艘船同时越过 13 时按动作数组顺序入港的问题；现在移动和入泊均按航道 0→2（R7.4 引用 R5.8）。增加反序动作回归测试，正序/反序得到相同终态。
+- 验证：完整 `npm install && npm run check`，73 tests passed，原 44 个验收名称全部保留，0 todo。
+- 契约变化：无。
+- 已知问题：下方两个 `TODO(ruling)` 待裁定；前端动画双计金额请求仍需 Claude 处理。
+- 给 Claude 的请求：领航员 `pilot-used.moves` 保留提交内容，后续 `punt-moved`/`punt-docked` 按航道播放，不要以提交数组推断泊位。
+- 下一步：PR #5 重新 Codex Review，通过后合并。
+
 ## 2026-10-03 — M1 验证完成与前端动画联调请求
 
 - 完成：契约 PR #4、基础 PR #1 均已通过 Codex Review/CI 并合并；完整核心 PR #5 已提交且 CI 成功。最新全仓 `npm install && npm run check` 通过：72 tests passed，0 todo，4 个 fixtures，39 场随机对局。

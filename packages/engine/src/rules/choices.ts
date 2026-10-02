@@ -89,7 +89,7 @@ export function pilotChoices(
     }
   }
   if (size === 'large') {
-    // Include both orders: the caller's chosen order controls pilot docking order.
+    // Both action encodings are legal; R5.8 docking remains in route order.
     for (const first of singles)
       for (const second of singles) {
         if (first.ware !== second.ware)

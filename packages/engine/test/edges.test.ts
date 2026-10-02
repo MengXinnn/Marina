@@ -69,6 +69,34 @@ describe('R10 strong pirates', () => {
 });
 
 describe('rule boundary regressions', () => {
+  it('R5.8/R7.4 simultaneous pilot arrivals dock by route even for reverse-order moves', () => {
+    const state = finalRoll();
+    state.phase = 'pilots';
+    state.pending = { type: 'pilot', playerId: 'p1', size: 'large' };
+    state.pilots.large = 'p1';
+    state.punts[0].position = state.punts[2].position = 13;
+    const action: Action = {
+      type: 'pilot',
+      playerId: 'p1',
+      moves: [
+        { ware: 'silk', delta: 1 },
+        { ware: 'ginseng', delta: 1 },
+      ],
+    };
+    const result = step(state, action);
+    expect(result.state.port.A.punt).toBe('ginseng');
+    expect(result.state.port.B.punt).toBe('silk');
+    expect(result.events.slice(1)).toEqual([
+      { type: 'punt-moved', ware: 'ginseng', from: 13, to: 14, cause: 'pilot' },
+      { type: 'punt-moved', ware: 'silk', from: 13, to: 14, cause: 'pilot' },
+      { type: 'punt-docked', ware: 'ginseng', dock: 'port', slot: 'A' },
+      { type: 'punt-docked', ware: 'silk', dock: 'port', slot: 'B' },
+    ]);
+    expect(step(state, { ...action, moves: [...action.moves].reverse() }).state).toEqual(
+      result.state,
+    );
+  });
+
   it('R3.3/R8.2 repayment cannot make an outstanding winning bid insolvent', () => {
     let state = createGame(config());
     state = step(state, { type: 'bid', playerId: 'p1', amount: 54 }).state;
