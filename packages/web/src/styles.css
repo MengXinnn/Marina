@@ -1,0 +1,27 @@
+:root {
+  --ink: #fff7e6;
+  --panel: rgba(13, 42, 58, 0.86);
+  --panel-edge: #f2c230;
+  --font-pixel: 'Fusion Pixel 12px Proportional SC', 'Press Start 2P', monospace;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: #0d2a3a;
+  color: var(--ink);
+}
+body {
+  font-family: var(--font-pixel);
+  overflow: hidden;
+  -webkit-font-smoothing: none;
+}
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
