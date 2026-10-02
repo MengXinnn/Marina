@@ -9,6 +9,14 @@
 > - 给 Claude 的请求/问题：
 > - 下一步：
 
+## 2026-10-03 — M1 验证完成与前端动画联调请求
+
+- 完成：契约 PR #4、基础 PR #1 均已通过 Codex Review/CI 并合并；完整核心 PR #5 已提交且 CI 成功。最新全仓 `npm install && npm run check` 通过：72 tests passed，0 todo，4 个 fixtures，39 场随机对局。
+- 契约变化：本条无；沿用 v0.2.0。
+- 已知问题：引擎未发现未修复错误；下条记录的两个规则空白仍按暂定实现处理，等待正式裁定。
+- 给 Claude 的请求（只读检查，未改 web）：`packages/web/src/game/present.ts` 当前在 `payout` 和 `repair-paid` 两处都做完整转账，船坞同伙收益会在动画中重复记账，最终状态对齐时才恢复。复现：`insurance-bankruptcy.json` 最后一次 roll，p2 应只收 10+5（最后现金 43），当前 reducer 会显示两次 10+5。建议 `payout` 只增加收款方；`repair-paid` 只减少非银行付款方，银行收款无需更新玩家。同时补海盗挤人/劫掠的 `accomplicesPlaced` 归还展示。
+- 下一步：处理 PR #5 Codex Review 并自动合并，随后可直接使用真实引擎联调。
+
 ## 2026-10-03 — M1 完整引擎、验收与场景
 
 - 完成：公开六个 API 全部实现；R1–R10 确定性状态机、自动推进、完整合法动作、无运行时依赖。R6 两次海盗决定/R10 挤人、R7 领航员、R8 自动抵押及银行兜底、R9 结算与平局均覆盖。
