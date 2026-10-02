@@ -11,7 +11,7 @@ import {
   type Ware,
 } from '@manila/engine';
 import { zh } from '../i18n/zh';
-import { useGame, useView } from '../game/store';
+import { useCurtain, useGame, useView } from '../game/store';
 import { PLAYER_COLORS } from '../scene/palette';
 import { WareChip } from './Hud';
 
@@ -21,7 +21,22 @@ export function ActionBar() {
   const dispatch = useGame((s) => s.dispatch);
   const undo = useGame((s) => s.undo);
   const canUndo = useGame((s) => s.history.length > 0);
+  const playing = useGame((s) => s.playing);
+  const skip = useGame((s) => s.skipAnimation);
+  const curtain = useCurtain();
   const pending = view.pending;
+  if (playing)
+    return (
+      <footer className="actionbar panel">
+        <div className="action-body">
+          <p className="muted">航行中……</p>
+        </div>
+        <button className="btn ghost" onClick={skip}>
+          跳过动画
+        </button>
+      </footer>
+    );
+  if (curtain) return null;
   const actor =
     'playerId' in pending ? view.players.find((p) => p.id === pending.playerId) : undefined;
   return (

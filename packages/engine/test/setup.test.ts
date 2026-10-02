@@ -14,6 +14,10 @@ const config: GameConfig = {
 };
 
 describe('R1 deterministic setup foundation', () => {
+  it('R1.6 omitted seed equals the documented deterministic default 0', () => {
+    const { seed: _seed, ...withoutSeed } = config;
+    expect(initialState(withoutSeed)).toEqual(initialState({ ...config, seed: 0 }));
+  });
   it('R1.1–R1.4 deals from the 12-card pool with opaque stable ids', () => {
     const before = copy(config);
     const state = initialState(config);

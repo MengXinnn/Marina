@@ -1,10 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { isMuted, setMuted } from '../audio/sfx';
 import { MARKET_TRACK, WARES, type PlayerViewEntry, type Ware } from '@manila/engine';
 import { zh } from '../i18n/zh';
 import { useGame, useView } from '../game/store';
 import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';
 import { ActionBar } from './ActionBar';
+import { Curtain } from './Curtain';
 import { DevBar } from './DevBar';
+import { RulesSheet } from './RulesSheet';
 
 export function Hud() {
   return (
@@ -12,9 +15,11 @@ export function Hud() {
       <TopBar />
       <PlayersPanel />
       <MarketPanel />
+      <EventLog />
       <ActionBar />
       <Toast />
       <DevBar />
+      <Curtain />
     </div>
   );
 }
@@ -38,7 +43,58 @@ function TopBar() {
         </span>
       )}
       {mode === 'mock' && <span className="badge">{zh.mockBanner}</span>}
+      <GameControls />
     </header>
+  );
+}
+
+function GameControls() {
+  const [rules, setRules] = useState(false);
+  const [mute, setMute] = useState(isMuted);
+  const settings = useGame((s) => s.settings);
+  const setSettings = useGame((s) => s.setSettings);
+  const backToSetup = useGame((s) => s.backToSetup);
+  const nextSpeed = ({ 1: 2, 2: 4, 4: 1 } as const)[settings.speed];
+  return (
+    <span className="controls">
+      <button className="btn tiny ghost" onClick={() => setRules(true)}>
+        规则
+      </button>
+      <button
+        className="btn tiny ghost"
+        title={mute ? '打开音效' : '关闭音效'}
+        onClick={() => {
+          setMuted(!mute);
+          setMute(!mute);
+        }}
+      >
+        {mute ? '静音' : '音效'}
+      </button>
+      {rules && <RulesSheet onClose={() => setRules(false)} />}
+      <button
+        className="btn tiny ghost"
+        title="动画速度"
+        onClick={() => setSettings({ speed: nextSpeed })}
+      >
+        ×{settings.speed}
+      </button>
+      <button
+        className="btn tiny ghost"
+        title="隐藏股票（交接设备）"
+        onClick={() => setSettings({ privacy: !settings.privacy })}
+      >
+        {settings.privacy ? '隐私开' : '隐私关'}
+      </button>
+      <button
+        className="btn tiny ghost"
+        onClick={() => {
+          if (window.confirm('回到开局设置？当前对局已自动保存，可以在设置页"继续上局"。'))
+            backToSetup();
+        }}
+      >
+        新游戏
+      </button>
+    </span>
   );
 }
 
@@ -69,6 +125,7 @@ function PlayerCard({ p, active, hm }: { p: PlayerViewEntry; active: boolean; hm
           </span>
         )}
         <span className="cash">{p.cash}</span>
+        <Floaters playerId={p.id} />
       </div>
       <div className="player-row">
         {p.shares.map((s) => (
@@ -91,6 +148,43 @@ function PlayerCard({ p, active, hm }: { p: PlayerViewEntry; active: boolean; hm
   );
 }
 
+/** "+18" / "−4" bubbles rising over a player's cash. */
+function Floaters({ playerId }: { playerId: string }) {
+  const floaters = useGame((s) => s.floaters);
+  const mine = floaters.filter((f) => f.playerId === playerId);
+  return (
+    <span className="floaters">
+      {mine.map((f, i) => (
+        <span
+          key={f.id}
+          className={`floater ${f.amount >= 0 ? 'gain' : 'loss'}`}
+          style={{ animationDelay: `${i * 90}ms` }}
+        >
+          {f.amount >= 0 ? `+${f.amount}` : `−${-f.amount}`}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function EventLog() {
+  const log = useGame((s) => s.log);
+  const ref = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    ref.current?.scrollTo({ top: ref.current.scrollHeight });
+  }, [log]);
+  return (
+    <section className="log panel">
+      <h3>航海日志</h3>
+      <ol ref={ref}>
+        {log.map((l) => (
+          <li key={l.id}>{l.text}</li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function PlayersPanel() {
   const view = useView();
   const actor = 'playerId' in view.pending ? view.pending.playerId : null;
@@ -108,7 +202,7 @@ function PlayersPanel() {
 function MarketPanel() {
   const view = useView();
   return (
-    <aside className="market panel">
+    <section className="market panel">
       <h3>{zh.market}</h3>
       <table>
         <tbody>
@@ -133,7 +227,7 @@ function MarketPanel() {
           ))}
         </tbody>
       </table>
-    </aside>
+    </section>
   );
 }
 
