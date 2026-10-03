@@ -29,6 +29,11 @@ export interface LlmProfile {
   extraBody: string;
   /** Appended to the system prompt: play style, strategy hints. */
   instructions: string;
+  /**
+   * Ask for an answer without a thinking phase, for presets that know how (`thinkingOff`).
+   * A thinking model takes tens of seconds per move; without it, a few seconds.
+   */
+  noThinking: boolean;
   /** Keep the key in localStorage; otherwise only for this browser session. */
   rememberKey: boolean;
 }
@@ -40,7 +45,7 @@ export interface LlmSettings {
 }
 
 export const ANTHROPIC_DEFAULT_MAX_TOKENS = 16000;
-export const DEFAULT_TIMEOUT_SEC = 60;
+export const DEFAULT_TIMEOUT_SEC = 90;
 
 export interface LlmPreset {
   id: string;
@@ -51,6 +56,8 @@ export interface LlmPreset {
   models: string[];
   /** Local servers usually need no key. */
   keyOptional?: boolean;
+  /** Request fields that switch the model's thinking off (sent when the profile asks for it). */
+  thinkingOff?: Record<string, unknown>;
   note?: string;
 }
 
@@ -75,6 +82,7 @@ export const PRESETS: LlmPreset[] = [
     provider: 'openai',
     baseUrl: 'https://api.deepseek.com/v1',
     models: ['deepseek-flash', 'deepseek-v4-pro'],
+    thinkingOff: { thinking: { type: 'disabled' } },
   },
   {
     id: 'gemini',
@@ -89,6 +97,7 @@ export const PRESETS: LlmPreset[] = [
     provider: 'openai',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     models: ['qwen-plus', 'qwen-max', 'qwen-turbo'],
+    thinkingOff: { enable_thinking: false },
   },
   {
     id: 'moonshot',
@@ -103,6 +112,7 @@ export const PRESETS: LlmPreset[] = [
     provider: 'openai',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     models: ['glm-4.5', 'glm-4.5-air', 'glm-4-flash'],
+    thinkingOff: { thinking: { type: 'disabled' } },
   },
   {
     id: 'siliconflow',
@@ -178,6 +188,7 @@ export function newProfile(presetId = 'deepseek', taken: string[] = []): LlmProf
     extraBody: '',
     instructions: '',
     rememberKey: true,
+    noThinking: preset.thinkingOff !== undefined,
   };
 }
 
@@ -262,6 +273,7 @@ function readProfile(raw: unknown, sessionKeys: Record<string, string>): LlmProf
     extraBody: str(r.extraBody),
     instructions: str(r.instructions),
     rememberKey,
+    noThinking: r.noThinking === true,
   };
 }
 

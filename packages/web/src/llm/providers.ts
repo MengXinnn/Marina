@@ -1,4 +1,4 @@
-import { ANTHROPIC_DEFAULT_MAX_TOKENS, type LlmProfile } from './settings';
+import { ANTHROPIC_DEFAULT_MAX_TOKENS, presetFor, type LlmProfile } from './settings';
 
 /**
  * Minimal HTTP clients for the two wire formats an AI profile can speak. Plain fetch from the
@@ -112,7 +112,15 @@ function requestBody(p: LlmProfile, messages: ChatMessage[]): Record<string, unk
   }
   if (p.maxTokens !== undefined) optional.max_tokens = p.maxTokens;
   if (p.effort) optional.reasoning_effort = p.effort;
-  return { model: p.model.trim(), messages, stream: false, ...optional, ...extraBody(p) };
+  const thinking = p.noThinking ? presetFor(p)?.thinkingOff : undefined;
+  return {
+    model: p.model.trim(),
+    messages,
+    stream: false,
+    ...optional,
+    ...thinking,
+    ...extraBody(p),
+  };
 }
 
 /** Pulls the provider's own error text out of an error response (both formats use error.message). */

@@ -252,6 +252,7 @@ function ProfileForm({
       provider: next.provider,
       baseUrl: next.baseUrl || p.baseUrl,
       model: keepModel === true ? p.model : (next.models[0] ?? p.model),
+      noThinking: next.thinkingOff !== undefined,
     });
     setModels([]);
     setModelsNote(null);
@@ -386,6 +387,21 @@ function ProfileForm({
           <span className={`ai-hint ${modelsNote.ok ? 'ok' : 'warn'}`}>{modelsNote.text}</span>
         )}
       </Field>
+      {preset?.thinkingOff && (
+        <Field
+          label="思考"
+          hint="开启思考的模型每步常要 20–60 秒，想得更细；关闭后一般几秒内回复。开启时建议把超时设到 120 秒以上。"
+        >
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={p.noThinking}
+              onChange={(e) => onChange({ noThinking: e.target.checked })}
+            />
+            关闭思考（更快）
+          </label>
+        </Field>
+      )}
       <Field label="打法风格" hint="可选：会附在规则说明后面，例如「激进一点，喜欢当海盗」">
         <textarea
           className="input"

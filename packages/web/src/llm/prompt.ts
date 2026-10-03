@@ -19,6 +19,7 @@ import {
   WARES,
   atLeast,
   nextMarketValue,
+  harborMasterValue,
   outlook,
   placementAdvice,
   type Action,
@@ -471,7 +472,8 @@ function describeDecision(
     lines.push(
       high ? `当前最高出价：${nameOf(view, high.playerId)} ${high.amount}。` : '还没有人出价。',
       `仍在竞拍：${(view.auction?.active ?? []).map((id) => nameOf(view, id)).join('、')}。`,
-      `港务长的好处：可以买 1 张股票；决定装哪 3 种货、各从哪格出发（影响你持股的货能否到港涨价）；每个派遣轮第一个选位置。出价付给银行。`,
+      `港务长的好处：可以买 1 张股票；决定装哪 3 种货、各从哪格出发（影响你持股的货能否到港涨价）；每个派遣轮第一个选位置。`,
+      `出价是净支出：钱付给银行，不会回来。参考：内置电脑估计港务长对你约值 ${Math.round(harborMasterValue(view, pending.playerId))} 比索。你现在有 ${me(view)?.cash ?? 0} 比索，当上港务长后还要留钱派遣同伙（一个位置 1–5 比索）。`,
     );
     const bids = options.filter((o) => o.action.type === 'bid');
     if (bids.length) {

@@ -4,6 +4,7 @@ import {
   createGame,
   getLegalActions,
   getPlayerView,
+  harborMasterValue,
   placementAdvice,
   type Action,
   type GameState,
@@ -58,6 +59,14 @@ describe('llm prompt ⇄ reply', () => {
     const kinds = new Set(samples.map((s) => s.state.pending.type));
     for (const k of ['bid', 'buy-share', 'load-punts', 'place-accomplice', 'roll-dice', 'pilot'])
       expect(kinds).toContain(k);
+  });
+
+  it('anchors auction bids with the built-in estimate of the harbour master', () => {
+    const { state, legal } = samples.find((s) => s.state.pending.type === 'bid')!;
+    const actor = (state.pending as { playerId: string }).playerId;
+    const view = getPlayerView(state, actor);
+    const value = Math.round(harborMasterValue(view, actor));
+    expect(buildTurnPrompt(view, legal).text).toContain(`港务长对你约值 ${value} 比索`);
   });
 
   it('gives every legal move a unique command that parses back to that move', () => {

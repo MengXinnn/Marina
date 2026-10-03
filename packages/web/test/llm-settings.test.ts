@@ -63,6 +63,9 @@ describe('AI profiles', () => {
     expect(b.name).toBe('DeepSeek 2');
     expect(a.id).not.toBe(b.id);
     expect(presetFor(a)?.id).toBe('deepseek');
+    // Presets that can switch thinking off start with it off (seconds instead of a minute a move).
+    expect(a.noThinking).toBe(true);
+    expect(newProfile('openai').noThinking).toBe(false);
   });
 
   it('validates what would break a request', () => {

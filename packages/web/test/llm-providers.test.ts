@@ -70,7 +70,23 @@ describe('OpenAI-compatible chat', () => {
     const req = sent(f);
     expect(req.url).toBe('https://api.deepseek.com/v1/chat/completions');
     expect(req.headers.authorization).toBe('Bearer sk-1');
-    expect(req.body).toEqual({ model: 'deepseek-flash', messages, stream: false });
+    expect(req.body).toEqual({
+      model: 'deepseek-flash',
+      messages,
+      stream: false,
+      thinking: { type: 'disabled' }, // new DeepSeek profiles answer without thinking
+    });
+  });
+
+  it('switches thinking off only where the preset knows how, and only when asked', async () => {
+    const f = respond({ choices: [{ message: { content: 'x' } }] });
+    await chat(profile({ noThinking: false }), messages);
+    expect(sent(f).body).not.toHaveProperty('thinking');
+    await chat(profile({ baseUrl: 'https://proxy.example/v1', noThinking: true }), messages);
+    expect(sent(f, 1).body).not.toHaveProperty('thinking');
+    // Extra body fields still win, e.g. to turn thinking back on per request.
+    await chat(profile({ extraBody: '{"thinking":{"type":"enabled"}}' }), messages);
+    expect(sent(f, 2).body.thinking).toEqual({ type: 'enabled' });
   });
 
   it('only sends optional knobs that are set, and merges extra body fields last', async () => {
