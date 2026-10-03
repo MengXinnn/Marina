@@ -1,0 +1,258 @@
+/* HUD motion: entrances, pops and the event banner. Stepped timing keeps the pixel-art feel. */
+
+@keyframes enter-down {
+  from {
+    translate: 0 -28px;
+    opacity: 0;
+  }
+}
+@keyframes enter-up {
+  from {
+    translate: 0 28px;
+    opacity: 0;
+  }
+}
+@keyframes enter-left {
+  from {
+    translate: -36px 0;
+    opacity: 0;
+  }
+}
+@keyframes enter-right {
+  from {
+    translate: 36px 0;
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  0% {
+    scale: 0.4;
+    opacity: 0;
+  }
+  60% {
+    scale: 1.15;
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ── panels slide in when a game starts; the action bar on every new decision ── */
+.topbar {
+  animation: enter-down 0.45s steps(6) both;
+}
+.players {
+  animation: enter-left 0.45s steps(6) 0.08s both;
+}
+.market {
+  animation: enter-right 0.45s steps(6) 0.14s both;
+}
+.log {
+  animation: enter-right 0.45s steps(6) 0.2s both;
+}
+.actionbar {
+  animation: enter-up 0.3s steps(4) both;
+}
+.toast {
+  animation: pop-in 0.3s steps(4) both;
+}
+.log li {
+  animation: enter-right 0.3s steps(3) both;
+}
+
+/* ── players ── */
+.player-row .chip,
+.hm {
+  animation: pop-in 0.35s steps(4) both;
+}
+.player.active .swatch {
+  animation: swatch-bob 0.6s steps(2) infinite;
+}
+@keyframes swatch-bob {
+  50% {
+    translate: 0 -3px;
+  }
+}
+.cash {
+  display: inline-block;
+  transition:
+    color 0.2s steps(2),
+    scale 0.2s steps(2);
+}
+.cash.count-up {
+  color: var(--ok);
+  scale: 1.2;
+}
+.cash.count-down {
+  color: var(--warn);
+  scale: 0.9;
+}
+
+/* ── market: the price marker pops when it moves ── */
+.market .cell.on {
+  animation: cell-pop 0.5s steps(4);
+}
+@keyframes cell-pop {
+  0% {
+    scale: 1.7;
+    box-shadow: 0 0 0 3px var(--gold);
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+/* ── top bar dice tumble in ── */
+.topbar .die {
+  animation: die-in 0.55s steps(6) both;
+}
+.topbar .die:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.topbar .die:nth-child(3) {
+  animation-delay: 0.16s;
+}
+@keyframes die-in {
+  0% {
+    rotate: -270deg;
+    scale: 0.2;
+    translate: 0 -14px;
+  }
+  70% {
+    rotate: 15deg;
+    scale: 1.2;
+  }
+  100% {
+    rotate: 0deg;
+    scale: 1;
+  }
+}
+
+/* ── event banner ── */
+.banner {
+  position: absolute;
+  top: 74px;
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: banner var(--banner-ms, 1.5s) steps(16) both;
+}
+.banner-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 30px;
+  padding: 6px 34px 8px;
+  color: var(--gold);
+  background: var(--panel);
+  border-block: var(--px) solid var(--edge);
+  text-shadow: 3px 3px 0 #6b3b20;
+  letter-spacing: 3px;
+  /* ribbon with notched ends */
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%, 14px 50%);
+  box-shadow: inset 0 3px 0 var(--hi);
+}
+.banner-title .swatch {
+  width: 18px;
+  height: 18px;
+}
+.banner-sub {
+  font-size: 14px;
+  color: #ffd9a8;
+  text-shadow: 2px 2px 0 var(--edge);
+}
+.banner-danger .banner-title {
+  color: #ffd2c4;
+  background: #6a1e1a;
+  text-shadow: 3px 3px 0 #2a0a08;
+}
+.banner-calm .banner-title {
+  color: #e8f6ff;
+}
+@keyframes banner {
+  0% {
+    opacity: 0;
+    scale: 1.8 0.2;
+  }
+  10% {
+    opacity: 1;
+    scale: 1.05 1.1;
+  }
+  16% {
+    scale: 1;
+  }
+  85% {
+    opacity: 1;
+    translate: -50% 0;
+  }
+  100% {
+    opacity: 0;
+    translate: -50% -16px;
+  }
+}
+
+/* ── overlays ── */
+.curtain-backdrop {
+  animation: fade-in 0.3s steps(3) both;
+}
+.curtain,
+.gameover {
+  animation: pop-in 0.4s steps(5) both;
+}
+.gameover-table tbody tr {
+  animation: enter-left 0.4s steps(4) both;
+}
+.gameover-table tbody tr:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.gameover-table tbody tr:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.gameover-table tbody tr:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.gameover-table tbody tr:nth-child(5) {
+  animation-delay: 0.6s;
+}
+.gameover-winner {
+  animation: winner-glow 1.2s steps(4) infinite;
+}
+@keyframes winner-glow {
+  50% {
+    text-shadow:
+      2px 2px 0 #6b3b20,
+      0 0 12px var(--gold);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar,
+  .players,
+  .market,
+  .log,
+  .log li,
+  .actionbar,
+  .toast,
+  .player-row .chip,
+  .hm,
+  .player.active .swatch,
+  .market .cell.on,
+  .topbar .die,
+  .curtain,
+  .curtain-backdrop,
+  .gameover,
+  .gameover-table tbody tr,
+  .gameover-winner {
+    animation: none;
+  }
+}

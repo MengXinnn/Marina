@@ -18,6 +18,27 @@ export const PLAYER_COLORS: Record<PlayerColor, { main: number; dark: number; cs
   white: { main: 0xf2efe6, dark: 0xb9b3a3, css: '#f2efe6' },
 };
 
+/** Particles and ambient creatures (scene/Effects.tsx, scene/Ambient.tsx). */
+export const FX = {
+  spray: 0xeafcff,
+  sprayBlue: 0x8fdcec,
+  smoke: 0xe2ddd2,
+  smokeDark: 0x6d665d,
+  flash: 0xfff3c4,
+  spark: 0xffd94a,
+  coin: 0xf2c230,
+  coinDark: 0xb98a14,
+  cannonball: 0x26262c,
+  dust: 0xd9c49a,
+  chips: 0x8a5a32,
+  gull: 0xf7f6ef,
+  gullWing: 0xaab4bb,
+  gullTip: 0x3a3d42,
+  beak: 0xf0a020,
+  fish: 0xb9d3dc,
+  fishDark: 0x5f8796,
+} as const;
+
 export const ENV = {
   sky: 0x8fd3e8,
   seaDeep: 0x0f4c6e,
