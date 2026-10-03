@@ -34,10 +34,6 @@ body {
   font-smooth: never;
   user-select: none;
 }
-canvas {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
 
 /* ── layout ── */
 .hud {

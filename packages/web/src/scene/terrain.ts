@@ -29,14 +29,28 @@ function valueNoise(x: number, z: number): number {
   return a + (b - a) * s(zf);
 }
 
+/** Stable 0..1 hash of a terrain cell, for paving / cobble variation. */
+function cellHash(i: number, k: number): number {
+  let h = (i * 73856093) ^ (k * 19349663);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
 const noise = (x: number, z: number) =>
   valueNoise(x * 0.45, z * 0.45) * 0.65 + valueNoise(x * 1.3 + 9, z * 1.3 - 4) * 0.35 - 0.5;
 
-type Kind = 0 | 1 | 2 | 3; // 0 water, 1 natural land, 2 quay (man-made), 3 shipyard apron (low, flat)
+// 0 water, 1 natural land, 2 quay (man-made), 3 shipyard apron (low, flat), 4 Manila town streets
+type Kind = 0 | 1 | 2 | 3 | 4;
+
+/** Manila's quay strip and the paved town behind it. */
+export const QUAY_WIDTH = 2.3;
+export const TOWN_BOUNDS = { minX: QUAY_X + QUAY_WIDTH, maxX: 31.6, minZ: -8.6, maxZ: 8.2 };
 
 function landKind(x: number, z: number): Kind {
   const n = noise(x, z);
-  if (x > QUAY_X - 0.05 && x < QUAY_X + 1.9 && z > -4.6 && z < 5.2) return 2; // Manila quay
+  if (x > QUAY_X - 0.05 && x < QUAY_X + QUAY_WIDTH && z > -4.6 && z < 5.2) return 2; // Manila quay
+  const t = TOWN_BOUNDS;
+  if (x >= t.minX && x < t.maxX + n * 1.2 && z > t.minZ - n && z < t.maxZ + n) return 4; // town
   if (x > QUAY_X + 0.3 + n * 0.8 || (x > QUAY_X && z > -4.6 && z < 5.2)) return 1; // Manila
   if (x < WEST_SHORE_X + n * 0.9) return 1; // west harbour
   if (x > 6.6 && x < 17.6 && z > 5.7 && z < 8.6) return 3; // shipyard apron
@@ -109,13 +123,32 @@ export function buildTerrain(): Terrain {
       const z = minZ + (k + 0.5) * S;
       const d = fromWater[c]!;
       const n = noise(x * 2, z * 2);
+      const r = cellHash(i, k);
       if (kd === 3) {
-        grid.set(i, 0, k, (i + k) % 7 === 0 ? ENV.dirt : ENV.wetSand);
+        // Shipyard apron: packed sand strewn with sawdust and wood chips, plank walk at the back.
+        if (z > 8.05) grid.set(i, 0, k, i % 2 ? ENV.plank : ENV.woodLight);
+        else grid.set(i, 0, k, r < 0.12 ? ENV.woodLight : r < 0.3 ? ENV.plank : ENV.sandDark);
         continue;
       }
       if (kd === 2) {
-        // stone quay with a timber edge
-        grid.box(i, 0, k, i, 2, k, d <= 1 ? ENV.woodDark : (i + k) % 2 ? ENV.rock : 0x9c9892);
+        // Cut-granite quay laid in running bond, with coping stones and timber fenders
+        // on the water face.
+        if (d <= 1) {
+          const fender = k % 5 === 0;
+          grid.box(i, 0, k, i, 1, k, fender ? ENV.woodDark : ENV.pavingDark);
+          grid.set(i, 2, k, fender ? ENV.woodDark : ENV.pavingLight);
+        } else {
+          const block = Math.floor((k + (i % 2)) / 2);
+          const b = cellHash(i, block * 31);
+          grid.box(i, 0, k, i, 1, k, ENV.mortar);
+          grid.set(i, 2, k, b < 0.33 ? ENV.paving : b < 0.66 ? ENV.pavingDark : ENV.pavingLight);
+        }
+        continue;
+      }
+      if (kd === 4 && d > 4) {
+        // Town: cobbled streets with the odd worn patch.
+        grid.box(i, 0, k, i, 1, k, ENV.dirt);
+        grid.set(i, 2, k, r < 0.6 ? ENV.cobble : r < 0.92 ? ENV.cobbleDark : ENV.sandDark);
         continue;
       }
       if (d <= 1) {
