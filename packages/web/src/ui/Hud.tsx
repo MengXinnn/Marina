@@ -6,6 +6,7 @@ import { useGame, useView } from '../game/store';
 import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';
 import { ActionBar } from './ActionBar';
 import { Curtain } from './Curtain';
+import { GameOver } from './GameOver';
 import { DevBar } from './DevBar';
 import { RulesSheet } from './RulesSheet';
 
@@ -20,6 +21,7 @@ export function Hud() {
       <Toast />
       <DevBar />
       <Curtain />
+      <GameOver />
     </div>
   );
 }
@@ -169,7 +171,8 @@ function Floaters({ playerId }: { playerId: string }) {
         <span
           key={f.id}
           className={`floater ${f.amount >= 0 ? 'gain' : 'loss'}`}
-          style={{ animationDelay: `${i * 90}ms` }}
+          // Line concurrent amounts up along the player's own row (newest nearest the panel).
+          style={{ left: `${(mine.length - 1 - i) * 44}px` }}
         >
           {f.amount >= 0 ? `+${f.amount}` : `−${-f.amount}`}
         </span>

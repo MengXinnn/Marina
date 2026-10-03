@@ -1,6 +1,7 @@
 # AGENTS.md — 马尼拉 Manila（体素像素风 3D 网页桌游）
 
-> 本仓库由**两个 AI agent 并行开发**，人类负责人（仓库 owner）负责分派任务和合并 PR。
+> **2026-10-03 起：所有开发由 Claude 负责（引擎 + 前端 + 电脑玩家）**，Codex 已停用；PR 由 Jules 自动 review（`.github/workflows/pr-review.yml`）。
+> 人类负责人（仓库 owner）负责分派任务、拍板规则裁定；PR 在 CI 通过且 Jules review 无未解决意见后合并。
 > 所有 agent 开工前必须读完：本文件 → `docs/COLLABORATION.md` → `docs/RULES.md` → `packages/engine/src/contract/types.ts`。
 
 ## 项目一句话
@@ -12,15 +13,15 @@
 
 | 区域 | 负责人 | 说明 |
 |---|---|---|
-| `packages/engine/**`（`src/contract/`、`src/ai/` 除外） | **Codex（ChatGPT）— 引擎/后端** | 纯 TypeScript 规则引擎：状态机、合法动作、结算、随机数、存档格式、测试 |
-| `packages/engine/src/ai/**`、`packages/engine/test/ai.test.ts`（以及 `src/index.ts` 末尾导出它的那一行） | **Claude** | 电脑玩家：只读 `PlayerView` + `getLegalActions` 的结果，不碰引擎内部（2026-10-02 负责人决定由 Claude 接手） |
-| `packages/web/**` | **Claude — 前端** | Vite + React + three.js（@react-three/fiber）体素渲染、动画、HUD、交互、音效、hotseat 隐私遮挡 |
-| `packages/engine/src/contract/**` | **共同所有** | 引擎 ⇄ 前端接口契约。改动必须走 `contract` 流程（见下） |
-| `docs/RULES.md` | 共同所有 | 规则规格；【裁定】条目改动需人类拍板 |
-| `docs/handoff/codex.md` / `docs/handoff/claude.md` | 各写各的 | 交接日志，只追加自己的文件，避免冲突 |
-| 根目录配置、CI、其余 docs | 谁需要谁改，PR 中说明 | |
+| `packages/engine/**` | **Claude** | 纯 TypeScript 规则引擎：状态机、合法动作、结算、随机数、存档格式、测试；`src/ai/` 电脑玩家（只读 `PlayerView` + `getLegalActions`）。M1 引擎由 Codex 编写（PR #1/#4/#5），2026-10-03 由 Claude 接手 |
+| `packages/web/**` | **Claude** | Vite + React + three.js（@react-three/fiber）体素渲染、动画、HUD、交互、音效、hotseat 隐私遮挡 |
+| `packages/engine/src/contract/**` | Claude（契约纪律仍适用） | 引擎 ⇄ 前端接口契约。改动仍走 `contract` 流程（见下），方便以后再拆分协作 |
+| `docs/RULES.md` | Claude 维护 | 规则规格；【裁定】条目改动需人类拍板 |
+| `docs/handoff/claude.md` | Claude | 交接日志；`docs/handoff/codex.md` 保留为历史记录，不再追加 |
+| 根目录配置、CI、其余 docs | Claude | |
+| PR review | **Jules**（自动，GitHub Actions） | PR 打开和每次推送都会自动 review；修复意见后直接推送即可触发复审 |
 
-**铁律：不要修改对方目录下的文件。** 需要对方改东西 → 在自己的交接日志里写"请求"，或开 GitHub Issue（标签 `agent:codex` / `agent:claude`）。
+**以后若再引入第二个开发 agent**：恢复按目录划分所有权，不要修改对方目录下的文件；需要对方改东西 → 写进交接日志或开 GitHub Issue。
 
 ## 契约（contract）流程
 
@@ -34,7 +35,7 @@
 ## 分支与 PR
 
 - 集成分支：`main`。所有 PR 都合入 `main`；开工前先拉取最新 `main`。
-- Codex 分支前缀：`codex/…`；Claude 分支前缀：`claude/…`。
+- Claude 分支前缀：`claude/…`（历史上的 `codex/…` 分支已全部合并或关闭）。
 - 小步提交，PR 小而聚焦；PR 描述写清：做了什么、契约是否变化、如何验证、需要对方做什么。
 - 合并前本地必须通过：`npm run check`（格式 + 类型检查 + 测试 + 构建）。CI 会跑同样的命令。
 - 尽量不新增依赖。引擎包**不允许新增运行时依赖**；需要时先在交接日志里说明理由。`package-lock.json` 冲突时用 `npm install` 重新生成，不要手改。

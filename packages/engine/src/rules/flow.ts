@@ -187,9 +187,8 @@ export function roll(state: GameState, events: GameEvent[]): void {
     advanceSchedule(state, events);
     return;
   }
-  // R5.9 natural failures enter the yard in route order before the captain chooses
-  // destinations. TODO(ruling): RULES does not specify interleaving these arrivals
-  // with plunder destinations; keep the natural A→B→C order deterministic.
+  // R5.9/R6.3【裁定】natural failures enter the yard in route order before the captain
+  // chooses destinations, so a plundered punt sent to the yard takes the next free slot.
   for (const punt of state.punts)
     if (punt.status === 'sailing' && punt.position < LAST_SPACE)
       dockPunt(state, punt, 'shipyard', events);

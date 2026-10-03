@@ -103,6 +103,11 @@ export function patchDisplay(prev: GameState, e: GameEvent): GameState {
       break;
     }
     case 'pirate-boarded': {
+      // R10: a displaced accomplice goes home.
+      if (e.displaced) {
+        const home = player(e.displaced);
+        if (home) home.accomplicesPlaced -= 1;
+      }
       const seat = punt(e.ware)?.seats[e.seat];
       if (seat) Object.assign(seat, { occupant: e.playerId, pirate: true, blindPassenger: false });
       if (s.pirates.captain === e.playerId) s.pirates.captain = null;
@@ -113,6 +118,11 @@ export function patchDisplay(prev: GameState, e: GameEvent): GameState {
       s.pirates = { captain: e.playerId, crew: null };
       break;
     case 'punt-plundered': {
+      // R6.3: everyone aboard goes home empty-handed.
+      for (const id of e.returned) {
+        const home = player(id);
+        if (home) home.accomplicesPlaced -= 1;
+      }
       const p = punt(e.ware);
       if (p) {
         p.plundered = true;

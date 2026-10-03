@@ -1,6 +1,6 @@
 /**
  * Public entry of @manila/engine. The web imports ONLY from here.
- * contract/* is co-owned; everything else under src/ is owned by the engine agent.
+ * contract/* is the engine ⇄ web contract; changes follow the contract process in AGENTS.md.
  */
 export * from './contract/types';
 export * from './contract/constants';
@@ -14,5 +14,5 @@ export {
   replay,
   engine,
 } from './engine';
-// Computer players (owned by the web agent, see AGENTS.md).
+// Computer players.
 export * from './ai';
