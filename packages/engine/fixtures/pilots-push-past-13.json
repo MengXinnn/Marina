@@ -1,0 +1,181 @@
+{
+  "name": "pilots-push-past-13",
+  "description": "R7: small pilot pushes ginseng from 13 to port; large pilot pushes nutmeg from 12 to port; docked punts do not move on roll three.",
+  "config": {
+    "players": [
+      {
+        "name": "Player 1",
+        "color": "red"
+      },
+      {
+        "name": "Player 2",
+        "color": "blue"
+      },
+      {
+        "name": "Player 3",
+        "color": "orange"
+      }
+    ],
+    "seed": 7,
+    "debug": {
+      "dice": [
+        {
+          "ginseng": 5,
+          "nutmeg": 5,
+          "silk": 1
+        },
+        {
+          "ginseng": 5,
+          "nutmeg": 4,
+          "silk": 1
+        },
+        {
+          "ginseng": 6,
+          "nutmeg": 6,
+          "silk": 1
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "type": "pass-bid",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p3"
+    },
+    {
+      "type": "buy-share",
+      "playerId": "p1",
+      "ware": null
+    },
+    {
+      "type": "load-punts",
+      "playerId": "p1",
+      "punts": [
+        {
+          "ware": "ginseng",
+          "start": 3
+        },
+        {
+          "ware": "nutmeg",
+          "start": 3
+        },
+        {
+          "ware": "silk",
+          "start": 3
+        }
+      ]
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p1",
+      "target": {
+        "kind": "pilot",
+        "size": "small"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p2",
+      "target": {
+        "kind": "pilot",
+        "size": "large"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p3",
+      "target": {
+        "kind": "pirate"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p1",
+      "target": {
+        "kind": "punt",
+        "ware": "ginseng"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p2",
+      "target": {
+        "kind": "punt",
+        "ware": "nutmeg"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p3",
+      "target": {
+        "kind": "port",
+        "slot": "A"
+      }
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p3"
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "pirate-board",
+      "playerId": "p3",
+      "ware": null
+    },
+    {
+      "type": "pilot",
+      "playerId": "p1",
+      "moves": [
+        {
+          "ware": "ginseng",
+          "delta": 1
+        }
+      ]
+    },
+    {
+      "type": "pilot",
+      "playerId": "p2",
+      "moves": [
+        {
+          "ware": "nutmeg",
+          "delta": 2
+        }
+      ]
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    }
+  ],
+  "expect": {
+    "voyage": 2,
+    "players.0.cash": 45,
+    "players.1.cash": 47,
+    "players.2.cash": 27,
+    "market.ginseng": 5,
+    "market.nutmeg": 5
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "name": "complete-voyage",
+  "description": "R2/R5/R8/R9: four players, all three movement rounds, cargo and dock payouts, insurance repairs and next voyage.",
+  "config": {
+    "players": [
+      {
+        "name": "Player 1",
+        "color": "red"
+      },
+      {
+        "name": "Player 2",
+        "color": "blue"
+      },
+      {
+        "name": "Player 3",
+        "color": "orange"
+      },
+      {
+        "name": "Player 4",
+        "color": "purple"
+      }
+    ],
+    "seed": 7,
+    "debug": {
+      "dice": [
+        {
+          "ginseng": 4,
+          "nutmeg": 4,
+          "silk": 4
+        },
+        {
+          "ginseng": 4,
+          "nutmeg": 4,
+          "silk": 4
+        },
+        {
+          "ginseng": 3,
+          "nutmeg": 3,
+          "silk": 1
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "type": "pass-bid",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p3"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p4"
+    },
+    {
+      "type": "buy-share",
+      "playerId": "p1",
+      "ware": null
+    },
+    {
+      "type": "load-punts",
+      "playerId": "p1",
+      "punts": [
+        {
+          "ware": "ginseng",
+          "start": 3
+        },
+        {
+          "ware": "nutmeg",
+          "start": 3
+        },
+        {
+          "ware": "silk",
+          "start": 3
+        }
+      ]
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p1",
+      "target": {
+        "kind": "punt",
+        "ware": "ginseng"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p2",
+      "target": {
+        "kind": "punt",
+        "ware": "nutmeg"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p3",
+      "target": {
+        "kind": "punt",
+        "ware": "silk"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p4",
+      "target": {
+        "kind": "insurance"
+      }
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p1",
+      "target": {
+        "kind": "port",
+        "slot": "A"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p2",
+      "target": {
+        "kind": "port",
+        "slot": "B"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p3",
+      "target": {
+        "kind": "shipyard",
+        "slot": "A"
+      }
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p4"
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p3"
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    }
+  ],
+  "expect": {
+    "voyage": 2,
+    "phase": "auction",
+    "market": {
+      "ginseng": 5,
+      "nutmeg": 5,
+      "silk": 0,
+      "jade": 0
+    },
+    "players.0.cash": 49,
+    "players.1.cash": 57,
+    "players.2.cash": 29,
+    "players.3.cash": 34
+  }
+}

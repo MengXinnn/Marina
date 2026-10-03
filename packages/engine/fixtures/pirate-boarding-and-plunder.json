@@ -1,0 +1,170 @@
+{
+  "name": "pirate-boarding-and-plunder",
+  "description": "R6: captain boards ginseng after roll two; promoted crew stays, then plunders nutmeg and sends it to port.",
+  "config": {
+    "players": [
+      {
+        "name": "Player 1",
+        "color": "red"
+      },
+      {
+        "name": "Player 2",
+        "color": "blue"
+      },
+      {
+        "name": "Player 3",
+        "color": "orange"
+      }
+    ],
+    "seed": 7,
+    "debug": {
+      "dice": [
+        {
+          "ginseng": 5,
+          "nutmeg": 3,
+          "silk": 1
+        },
+        {
+          "ginseng": 5,
+          "nutmeg": 3,
+          "silk": 1
+        },
+        {
+          "ginseng": 1,
+          "nutmeg": 4,
+          "silk": 1
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "type": "pass-bid",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p3"
+    },
+    {
+      "type": "buy-share",
+      "playerId": "p1",
+      "ware": null
+    },
+    {
+      "type": "load-punts",
+      "playerId": "p1",
+      "punts": [
+        {
+          "ware": "ginseng",
+          "start": 3
+        },
+        {
+          "ware": "nutmeg",
+          "start": 3
+        },
+        {
+          "ware": "silk",
+          "start": 3
+        }
+      ]
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p1",
+      "target": {
+        "kind": "pirate"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p2",
+      "target": {
+        "kind": "pirate"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p3",
+      "target": {
+        "kind": "punt",
+        "ware": "nutmeg"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p1",
+      "target": {
+        "kind": "punt",
+        "ware": "ginseng"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p2",
+      "target": {
+        "kind": "punt",
+        "ware": "nutmeg"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p3",
+      "target": {
+        "kind": "port",
+        "slot": "A"
+      }
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p3"
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "pirate-board",
+      "playerId": "p1",
+      "ware": "ginseng"
+    },
+    {
+      "type": "pirate-board",
+      "playerId": "p2",
+      "ware": null
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "plunder-destination",
+      "playerId": "p2",
+      "destination": "port"
+    }
+  ],
+  "expect": {
+    "voyage": 2,
+    "market.ginseng": 5,
+    "market.nutmeg": 5,
+    "players.0.cash": 42,
+    "players.1.cash": 46,
+    "players.2.cash": 30
+  }
+}

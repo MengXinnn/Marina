@@ -1,4 +1,4 @@
-import { DOCK_SLOTS, LOAN_AMOUNT } from '../contract/constants';
+import { DOCK_SLOTS, LOAN_AMOUNT, LOAN_REPAYMENT } from '../contract/constants';
 import type {
   DockSlot,
   DockSpace,
@@ -52,4 +52,12 @@ export function scores(state: GameState): ScoreLine[] {
       total: p.cash + shareValue - mortgagePenalty,
     };
   });
+}
+
+/** R3.3/R8.2 TODO(ruling): preserve collateral backing a live winning bid.
+ * Redeeming reduces purchasing power by three; allow it only if that bid remains
+ * payable. Other players and all non-auction phases can redeem normally. */
+export function canRepay(state: GameState, p: PlayerState): boolean {
+  const committed = state.auction?.highBid?.playerId === p.id ? state.auction.highBid.amount : 0;
+  return p.cash >= LOAN_REPAYMENT && funds(p) - (LOAN_REPAYMENT - LOAN_AMOUNT) >= committed;
 }

@@ -1,0 +1,139 @@
+{
+  "name": "insurance-bankruptcy",
+  "description": "R8.5: 40-peso auction forces one mortgage; all punts fail; repairs mortgage the last share and the bank covers the remaining five pesos.",
+  "config": {
+    "players": [
+      {
+        "name": "Player 1",
+        "color": "red"
+      },
+      {
+        "name": "Player 2",
+        "color": "blue"
+      },
+      {
+        "name": "Player 3",
+        "color": "orange"
+      }
+    ],
+    "seed": 7,
+    "debug": {
+      "dice": [
+        {
+          "ginseng": 1,
+          "nutmeg": 1,
+          "silk": 1
+        },
+        {
+          "ginseng": 1,
+          "nutmeg": 1,
+          "silk": 1
+        },
+        {
+          "ginseng": 1,
+          "nutmeg": 1,
+          "silk": 1
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "type": "bid",
+      "playerId": "p1",
+      "amount": 40
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-bid",
+      "playerId": "p3"
+    },
+    {
+      "type": "buy-share",
+      "playerId": "p1",
+      "ware": null
+    },
+    {
+      "type": "load-punts",
+      "playerId": "p1",
+      "punts": [
+        {
+          "ware": "ginseng",
+          "start": 3
+        },
+        {
+          "ware": "nutmeg",
+          "start": 3
+        },
+        {
+          "ware": "silk",
+          "start": 3
+        }
+      ]
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p1",
+      "target": {
+        "kind": "insurance"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p2",
+      "target": {
+        "kind": "shipyard",
+        "slot": "C"
+      }
+    },
+    {
+      "type": "place-accomplice",
+      "playerId": "p3",
+      "target": {
+        "kind": "punt",
+        "ware": "ginseng"
+      }
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p1"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p2"
+    },
+    {
+      "type": "pass-placement",
+      "playerId": "p3"
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    },
+    {
+      "type": "roll-dice",
+      "playerId": "p1"
+    }
+  ],
+  "expect": {
+    "voyage": 2,
+    "players.0.cash": 0,
+    "players.0.shares.0.mortgaged": true,
+    "players.0.shares.1.mortgaged": true,
+    "players.1.cash": 43,
+    "players.2.cash": 29,
+    "market": {
+      "ginseng": 0,
+      "nutmeg": 0,
+      "silk": 0,
+      "jade": 0
+    }
+  }
+}
