@@ -70,7 +70,7 @@ describe('OpenAI-compatible chat', () => {
     const req = sent(f);
     expect(req.url).toBe('https://api.deepseek.com/v1/chat/completions');
     expect(req.headers.authorization).toBe('Bearer sk-1');
-    expect(req.body).toEqual({ model: 'deepseek-chat', messages, stream: false });
+    expect(req.body).toEqual({ model: 'deepseek-flash', messages, stream: false });
   });
 
   it('only sends optional knobs that are set, and merges extra body fields last', async () => {

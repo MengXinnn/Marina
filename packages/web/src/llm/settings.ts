@@ -74,7 +74,7 @@ export const PRESETS: LlmPreset[] = [
     label: 'DeepSeek 深度求索',
     provider: 'openai',
     baseUrl: 'https://api.deepseek.com/v1',
-    models: ['deepseek-chat', 'deepseek-reasoner'],
+    models: ['deepseek-flash', 'deepseek-v4-pro'],
   },
   {
     id: 'gemini',
