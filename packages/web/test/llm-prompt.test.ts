@@ -4,6 +4,7 @@ import {
   createGame,
   getLegalActions,
   getPlayerView,
+  placementAdvice,
   type Action,
   type GameState,
   type PendingDecision,
@@ -88,6 +89,23 @@ describe('llm prompt ⇄ reply', () => {
         const line = text.split('\n').find((l) => l.startsWith(`- ${p.name}（${p.id}）`))!;
         expect(line).toContain('种类保密');
         expect(line).not.toMatch(/ginseng|nutmeg|silk|jade/);
+      }
+    }
+  });
+
+  it('prices placements with the same expected value as the hover cards', () => {
+    const placements = samples.filter((s) => s.state.pending.type === 'place-accomplice');
+    expect(placements.length).toBeGreaterThan(0);
+    for (const { state, legal } of placements.slice(0, 20)) {
+      const actor = (state.pending as { playerId: string }).playerId;
+      const view = getPlayerView(state, actor);
+      const { options } = buildTurnPrompt(view, legal);
+      for (const o of options) {
+        if (o.action.type !== 'place-accomplice') continue;
+        const { expected } = placementAdvice(view, actor, o.action.target);
+        if (expected === null) expect(o.label).not.toContain('期望');
+        else expect(o.label).toContain(`期望现金净收益 `);
+        if (expected !== null && expected > 0) expect(o.label).toContain(`+${expected.toFixed(1)}`);
       }
     }
   });

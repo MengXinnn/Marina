@@ -5,7 +5,7 @@ import {
   WARE_INFO,
   nextMarketValue,
 } from '../contract/constants';
-import type { PlayerId, PlayerView, PuntState, Ware } from '../contract/types';
+import type { PlacementTarget, PlayerId, PlayerView, PuntState, Ware } from '../contract/types';
 import { atLeast, outlook } from './probability';
 
 /**
@@ -91,4 +91,31 @@ export function stakeValue(
 /** JSON clone — PlayerView is plain data by contract. */
 export function cloneView(view: PlayerView): PlayerView {
   return JSON.parse(JSON.stringify(view)) as PlayerView;
+}
+
+/** Apply `target` for `me` to a cloned view (what-if), mirroring R5.3/R5.4 seat assignment. */
+export function withPlacement(view: PlayerView, me: PlayerId, t: PlacementTarget): PlayerView {
+  const v = cloneView(view);
+  switch (t.kind) {
+    case 'punt': {
+      const seat = v.punts.find((p) => p.ware === t.ware)?.seats.find((s) => !s.occupant);
+      if (seat) seat.occupant = me;
+      break;
+    }
+    case 'port':
+    case 'shipyard':
+      v[t.kind][t.slot].occupant = me;
+      break;
+    case 'pirate':
+      if (!v.pirates.captain) v.pirates.captain = me;
+      else v.pirates.crew = me;
+      break;
+    case 'pilot':
+      v.pilots[t.size] = me;
+      break;
+    case 'insurance':
+      v.insurance = me;
+      break;
+  }
+  return v;
 }

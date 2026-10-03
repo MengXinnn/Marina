@@ -8,6 +8,7 @@ import { useLlmSettings, type LlmProfile } from '../llm/settings';
 import { PLAYER_COLORS } from '../scene/palette';
 import { AiSettings } from './AiSettings';
 import { RulesSheet } from './RulesSheet';
+import { SoundControls } from './SoundControls';
 
 const COLORS: PlayerColor[] = ['red', 'blue', 'orange', 'purple', 'white'];
 const DEFAULT_NAMES = ['小红', '阿蓝', '橙子', '紫苏', '小白'];
@@ -227,6 +228,7 @@ export function SetupScreen() {
               继续上局
             </button>
           )}
+          <SoundControls />
         </div>
         {rules && <RulesSheet onClose={() => setRules(false)} />}
         {aiSettings && <AiSettings onClose={() => setAiSettings(false)} />}

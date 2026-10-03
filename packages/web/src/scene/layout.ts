@@ -77,9 +77,28 @@ export const PILOT_BOAT: Record<PilotSize, [number, number]> = {
   large: [8.7, -5.1],
 };
 
-export const INSURANCE_OFFICE: [number, number] = [-4.4, 3.6];
+export const INSURANCE_OFFICE: [number, number] = [-5.0, 3.4];
 export const INSURANCE_STAND: [number, number] = [-2.6, 4.4];
 export const HARBOR_OFFICE: [number, number] = [-4.6, -3.4];
 export const WAREHOUSE: [number, number] = [-4.2, 0.2];
+
+/** Manila landmarks (scenery only — not click targets). */
+export const FORT: [number, number] = [23.1, -6.7];
+export const CHURCH: [number, number] = [27.4, -2.9];
+export const PLAZA_FOUNTAIN: [number, number] = [27.4, 0.1];
+export const ADUANA: [number, number] = [23.75, 3.5];
+/** Finger piers between the port berths (z of each pier; they run out from the quay edge). */
+export const PORT_PIERS_Z = [-3.75, -1.25, 1.25, 3.75];
+/** Shipyard: a hull on the stocks west of the slipways, and the shipwrights' shed behind. */
+export const HULL_FRAME: [number, number] = [4.6, 7.6];
+export const SHIPWRIGHT_SHED: [number, number] = [11.6, 9.7];
+/** West wharf (plank pier) where the cargo is loaded. */
+export const WEST_WHARF: [number, number] = [-1.15, 0.4];
+
+/** Ware crates outside the warehouse, in WARES order. */
+export const CRATE = (i: number): [number, number] => [-2.7, -1.0 + i * 0.55];
+
+/** Anchor of the in-scene notice board used before the punts are loaded (auction, shares). */
+export const WORLD_PANEL: [number, number, number] = [6.9, 1.2, 0.4];
 
 export const CAMERA_TARGET: [number, number, number] = [10.2, 0, -1.0];

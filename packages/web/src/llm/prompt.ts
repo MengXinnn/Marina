@@ -20,6 +20,7 @@ import {
   atLeast,
   nextMarketValue,
   outlook,
+  placementAdvice,
   type Action,
   type PendingDecision,
   type PlayerView,
@@ -359,11 +360,20 @@ function placementLabel(
       what =
         `保险代理人：免费，立即得 ${INSURANCE_PREMIUM}；每艘船进船坞都要赔付该泊位奖金` +
         (view.punts.length ? `（按现在的估计约赔 ${expected.toFixed(1)}）` : '');
-      return what;
+      return what + expectation(view, a);
     }
   }
-  if (blind) return `${what}【偷渡：改为支付你的全部现金 ${cash}】`;
-  return price > cash ? `${what}（现金不足，将自动抵押股票）` : what;
+  if (blind) return `${what}【偷渡：改为支付你的全部现金 ${cash}】${expectation(view, a)}`;
+  return (price > cash ? `${what}（现金不足，将自动抵押股票）` : what) + expectation(view, a);
+}
+
+/** The same cash estimate the hover cards show (engine `placementAdvice`); none for pilots. */
+function expectation(view: PlayerView, a: Extract<Action, { type: 'place-accomplice' }>): string {
+  if (!view.punts.length) return '';
+  const { expected } = placementAdvice(view, a.playerId, a.target);
+  if (expected === null) return '';
+  const sign = expected > 0 ? '+' : expected < 0 ? '−' : '±';
+  return `；期望现金净收益 ${sign}${Math.abs(expected).toFixed(1)}（不含股价变化）`;
 }
 
 function pilotLabel(view: PlayerView, a: Extract<Action, { type: 'pilot' }>): string {

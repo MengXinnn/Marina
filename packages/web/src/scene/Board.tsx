@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { Html } from '@react-three/drei';
+import { useMemo, useState } from 'react';
 import {
   DOCK_SLOTS,
   INSURANCE_PREMIUM,
@@ -10,21 +11,31 @@ import {
   type PlacementTarget,
   type PlayerColor,
   type PlayerView,
+  type Ware,
 } from '@manila/engine';
+import { boardingOptions, type BoardAction } from '../game/choices';
 import { legalActionsFor, useBotActing, useCurtain, useGame, useView } from '../game/store';
+import { zh } from '../i18n/zh';
+import type { Spot } from '../i18n/spots';
 import {
+  CRATE,
   HARBOR_OFFICE,
+  LANE_Z,
   INSURANCE_STAND,
   PILOT_BOAT,
   PIRATE_SHIP,
   PORT_STAND,
   SHIPYARD_STAND,
+  WAREHOUSE,
+  spaceX,
 } from './layout';
 import { Dice } from './Dice';
 import { signModel, towerModel } from './models';
 import { ENV, PLAYER_COLORS } from './palette';
 import { PIECE_SCALE } from './layout';
-import { Punt, Stand } from './Pieces';
+import { Punt, Stand, usePick, type Pickable } from './Pieces';
+import { SpotTip, WORLD_Z } from './SpotTip';
+import { WorldActions } from './WorldActions';
 import { surfaceY } from './terrain';
 import { VoxelMesh } from './VoxelMesh';
 
@@ -61,11 +72,15 @@ function useSelectableTargets(view: PlayerView): Set<string> {
 export function Board() {
   const view = useView();
   const dispatch = useGame((s) => s.dispatch);
+  const mode = useGame((s) => s.mode);
+  const state = useGame((s) => s.state);
   const playing = useGame((s) => s.playing);
   const curtain = useCurtain();
   const selectableAll = useSelectableTargets(view);
   const botTurn = useBotActing('playerId' in view.pending ? view.pending.playerId : null);
-  const selectable = playing || curtain || botTurn ? new Set<string>() : selectableAll;
+  const inGame = useGame((s) => s.screen === 'game');
+  const interactive = inGame && !playing && !curtain && !botTurn;
+  const selectable = interactive ? selectableAll : new Set<string>();
   const colors = useMemo(
     () =>
       Object.fromEntries(view.players.map((p) => [p.id, p.color])) as Record<string, PlayerColor>,
@@ -74,11 +89,36 @@ export function Board() {
   const colorOf = (id: string | null) => (id ? (colors[id] ?? null) : null);
   const actor = 'playerId' in view.pending ? view.pending.playerId : null;
   const actorColor = actor ? colors[actor] : undefined;
-  const pick = (target: PlacementTarget) => ({
+  const pick = (target: PlacementTarget): Pickable => ({
+    spot: target,
     selectable: selectable.has(targetKey(target)),
     actorColor,
+    hint: selectable.has(targetKey(target)) ? zh.world.clickToPlace : undefined,
     onPick: () => actor && dispatch({ type: 'place-accomplice', playerId: actor, target }),
   });
+
+  // Pirate boarding (R6.2): the candidate punts themselves are the buttons.
+  const [boardMenu, setBoardMenu] = useState<{ turn: number; ware: Ware } | null>(null);
+  const boarding = useMemo(
+    () =>
+      interactive && view.pending.type === 'pirate-board'
+        ? boardingOptions(view.pending, legalActionsFor(state, mode))
+        : [],
+    [interactive, view.pending, state, mode],
+  );
+  const puntPick = (ware: Ware): Pickable => {
+    if (view.pending.type !== 'pirate-board') return pick({ kind: 'punt', ware });
+    const options = boarding.filter((a) => a.ware === ware);
+    return {
+      spot: { kind: 'punt', ware },
+      selectable: options.length > 0,
+      actorColor,
+      hint: options.length ? zh.world.clickToBoard : undefined,
+      onPick: () =>
+        options.length === 1 ? dispatch(options[0]!) : setBoardMenu({ turn: view.turn, ware }),
+    };
+  };
+  const menu = boardMenu?.turn === view.turn ? boardMenu : null;
   const hmColor = colorOf(view.harborMaster) ?? 'white';
   const pirateNext = view.pirates.captain ? 'crew' : 'captain';
 
@@ -91,10 +131,29 @@ export function Board() {
           colorOf={(id) => colors[id]!}
           bobPhase={i * 1.7}
           scale={PIECE_SCALE.punt}
-          {...(p.status === 'sailing' ? pick({ kind: 'punt', ware: p.ware }) : {})}
+          {...(p.status === 'sailing'
+            ? puntPick(p.ware)
+            : { spot: { kind: 'punt', ware: p.ware } })}
         />
       ))}
       <Dice />
+      {interactive && actorColor && <WorldActions view={view} actorColor={actorColor} />}
+      {menu && interactive && (
+        <DisplaceMenu
+          view={view}
+          ware={menu.ware}
+          options={boarding.filter((a) => a.ware === menu.ware)}
+          onPick={(a) => dispatch(a)}
+        />
+      )}
+      <InfoSpot spot={{ kind: 'office' }} at={HARBOR_OFFICE} size={[1.8, 3.2, 1.8]} tipY={3.6} />
+      <InfoSpot spot={{ kind: 'warehouse' }} at={WAREHOUSE} size={[2.6, 1.8, 3.2]} tipY={2.2} />
+      <InfoSpot
+        spot={{ kind: 'warehouse' }}
+        at={[CRATE(1.5)[0], CRATE(1.5)[1]]}
+        size={[0.7, 0.8, 2.4]}
+        tipY={1.4}
+      />
 
       {DOCK_SLOTS.map((slot) => {
         const [px, pz] = PORT_STAND[slot];
@@ -131,7 +190,7 @@ export function Board() {
             occupant={colorOf(view.pirates[role])}
             pirateHat
             position={[0, 0.5, role === 'captain' ? 0.85 : -0.55]}
-            {...(role === pirateNext ? pick({ kind: 'pirate' }) : {})}
+            {...(role === pirateNext ? pick({ kind: 'pirate' }) : { spot: { kind: 'pirate' } })}
           />
         ))}
       </group>
@@ -182,5 +241,66 @@ function Sign({ text, x, z }: { text: string; x: number; z: number }) {
     <group position={[x, surfaceY(x, z), z]} scale={PIECE_SCALE.sign}>
       <VoxelMesh model={`sign-${text}`} build={() => signModel(text, ENV.gold, ENV.woodDark)} />
     </group>
+  );
+}
+
+/** Invisible hover box over a building, showing its card. */
+function InfoSpot({
+  spot,
+  at,
+  size,
+  tipY,
+}: {
+  spot: Spot;
+  at: [number, number];
+  size: [number, number, number];
+  tipY: number;
+}) {
+  const { hover, handlers } = usePick({});
+  const y = surfaceY(at[0], at[1]);
+  return (
+    <group position={[at[0], y, at[1]]}>
+      <mesh position-y={size[1] / 2} visible={false} {...handlers}>
+        <boxGeometry args={size} />
+      </mesh>
+      {hover && <SpotTip spot={spot} y={tipY} actionable={false} />}
+    </group>
+  );
+}
+
+/** R10 variant: boarding a full punt means choosing whom to push off. */
+function DisplaceMenu({
+  view,
+  ware,
+  options,
+  onPick,
+}: {
+  view: PlayerView;
+  ware: Ware;
+  options: BoardAction[];
+  onPick: (a: BoardAction) => void;
+}) {
+  const punt = view.punts.find((p) => p.ware === ware);
+  if (!punt) return null;
+  const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '';
+  return (
+    <Html
+      position={[spaceX(Math.min(punt.position, 14)), 1.6, LANE_Z[punt.route]]}
+      zIndexRange={WORLD_Z}
+    >
+      <div className="world-panel panel">
+        <div className="row">
+          {options.map((a) => {
+            const victim =
+              a.displaceSeat === undefined ? null : (punt.seats[a.displaceSeat]?.occupant ?? null);
+            return (
+              <button key={a.displaceSeat ?? 'free'} className="btn" onClick={() => onPick(a)}>
+                {victim ? zh.world.displace(nameOf(victim)) : zh.actions.board(zh.ware[ware])}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </Html>
   );
 }
