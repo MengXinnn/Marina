@@ -3,10 +3,12 @@ import { create } from 'zustand';
 import {
   NotImplementedError,
   applyAction,
+  chooseBotAction,
   createGame,
   getLegalActions,
   getPlayerView,
   type Action,
+  type BotLevel,
   type EngineError,
   type GameConfig,
   type GameEvent,
@@ -33,6 +35,12 @@ export const DEFAULT_CONFIG: GameConfig = {
     { name: '紫苏', color: 'purple' },
   ],
 };
+
+/** Seats played by the computer, keyed by player id. */
+export type BotSeats = Partial<Record<PlayerId, BotLevel>>;
+
+/** How long a computer player "thinks" before acting (ms at speed ×1). */
+const BOT_THINK_MS = 750;
 
 export interface Settings {
   /** Hotseat privacy: hide share wares until the acting player confirms they hold the device. */
@@ -72,10 +80,13 @@ interface GameStore {
   settings: Settings;
   /** Hotseat: the player who confirmed holding the device. */
   revealedFor: PlayerId | null;
+  bots: BotSeats;
+  /** A computer seat that could not act this turn; humans may act for it until the turn advances. */
+  botStalled: PlayerId | null;
   lastError: EngineError | null;
   notice: string | null;
 
-  startGame(config: GameConfig): void;
+  startGame(config: GameConfig, bots?: BotSeats): void;
   resumeSaved(): boolean;
   backToSetup(): void;
   dispatch(action: Action): void;
@@ -94,7 +105,12 @@ interface GameStore {
 
 function boot(): { mode: EngineMode; state: GameState } {
   try {
-    return { mode: 'live', state: createGame(DEFAULT_CONFIG) };
+    const state = createGame(DEFAULT_CONFIG);
+    // A partially implemented engine must not crash the UI: the read side has to work too.
+    getPlayerView(state, null);
+    const actor = actorOf(state);
+    if (actor) getLegalActions(state, actor);
+    return { mode: 'live', state };
   } catch (e) {
     if (e instanceof NotImplementedError) return { mode: 'mock', state: createMockState() };
     throw e;
@@ -253,6 +269,38 @@ export const useGame = create<GameStore>((set, get) => {
     }
     if (token !== runToken) return;
     set({ display: finalState, playing: false, skip: false, dice: null });
+    scheduleBot();
+  }
+
+  let botTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** If a computer player must act next, let it act after a short "thinking" pause. */
+  function scheduleBot(): void {
+    if (botTimer) clearTimeout(botTimer);
+    botTimer = null;
+    const { mode, screen, playing, state, bots, settings } = get();
+    const actor = actorOf(state);
+    if (mode !== 'live' || screen !== 'game' || playing || !actor) return;
+    const level = bots[actor];
+    if (!level) return;
+    const turn = state.turn;
+    botTimer = setTimeout(() => {
+      const s = get();
+      if (s.state.turn !== turn || s.playing || s.screen !== 'game') return;
+      try {
+        const action = chooseBotAction(
+          getPlayerView(s.state, actor),
+          getLegalActions(s.state, actor),
+          { level, random: Math.random },
+        );
+        s.dispatch(action);
+      } catch (e) {
+        if (!(e instanceof NotImplementedError)) console.error(e);
+      }
+      // The engine refused or the bot failed: hand this decision to the humans instead of
+      // leaving the seat "thinking" forever. Automation resumes once the turn advances.
+      if (get().state.turn === turn) set({ botStalled: actor, notice: 'bot-stalled' });
+    }, BOT_THINK_MS / settings.speed);
   }
 
   return {
@@ -268,10 +316,12 @@ export const useGame = create<GameStore>((set, get) => {
     dice: null,
     settings: { privacy: true, speed: 1 },
     revealedFor: null,
+    bots: {},
+    botStalled: null,
     lastError: null,
     notice: null,
 
-    startGame(config) {
+    startGame(config, bots = {}) {
       runToken++;
       const { mode } = get();
       // The engine is pure (no hidden entropy), so a fresh game needs a seed from us.
@@ -287,9 +337,13 @@ export const useGame = create<GameStore>((set, get) => {
         floaters: [],
         log: [{ id: nextId++, text: '—— 新游戏开始 ——' }],
         revealedFor: null,
+        // Bots only act through the real engine; in mock mode they would just "think" forever.
+        bots: mode === 'live' ? bots : {},
+        botStalled: null,
         notice: mode === 'mock' ? 'mock' : null,
       });
-      if (mode === 'live') writeSave(state);
+      if (mode === 'live') writeSave(state, bots);
+      scheduleBot();
     },
 
     resumeSaved() {
@@ -298,18 +352,22 @@ export const useGame = create<GameStore>((set, get) => {
       runToken++;
       set({
         screen: 'game',
-        state: saved,
-        display: saved,
+        state: saved.state,
+        display: saved.state,
         history: [],
         playing: false,
         log: [{ id: nextId++, text: '—— 继续上局 ——' }],
         revealedFor: null,
+        bots: saved.bots,
+        botStalled: null,
       });
+      scheduleBot();
       return true;
     },
 
     backToSetup() {
       runToken++;
+      if (botTimer) clearTimeout(botTimer);
       set({ screen: 'setup', playing: false, dice: null });
     },
 
@@ -320,24 +378,45 @@ export const useGame = create<GameStore>((set, get) => {
         set({ notice: 'engine-pending' });
         return;
       }
-      const result = applyAction(state, action);
+      let result: ReturnType<typeof applyAction>;
+      try {
+        result = applyAction(state, action);
+      } catch (e) {
+        // Engine still partially stubbed: keep the game alive and say so.
+        if (e instanceof NotImplementedError) {
+          set({ notice: 'engine-pending' });
+          return;
+        }
+        throw e;
+      }
       if (!result.ok) {
         set({ lastError: result.error, notice: result.error.code });
         return;
       }
-      set({ state: result.state, history: [...history, state], lastError: null });
+      set({ state: result.state, history: [...history, state], lastError: null, botStalled: null });
       if (result.state.phase === 'game-over') clearSave();
-      else writeSave(result.state);
+      else writeSave(result.state, get().bots);
       void animate(result.events, result.state);
     },
 
     undo() {
-      const { history, playing } = get();
-      const prev = history[history.length - 1];
-      if (!prev || playing) return;
+      const { history, playing, bots } = get();
+      if (playing || history.length === 0) return;
+      // Step back over computer turns to the last decision a human made.
+      let i = history.length - 1;
+      while (i > 0 && bots[actorOf(history[i]!) ?? ''] !== undefined) i--;
+      const prev = history[i]!;
+      if (bots[actorOf(prev) ?? ''] !== undefined) return;
       runToken++;
-      set({ state: prev, display: prev, history: history.slice(0, -1), dice: null });
-      writeSave(prev);
+      if (botTimer) clearTimeout(botTimer);
+      set({
+        state: prev,
+        display: prev,
+        history: history.slice(0, i),
+        dice: null,
+        botStalled: null,
+      });
+      writeSave(prev, bots);
     },
 
     reveal() {
@@ -388,12 +467,22 @@ export function actorOf(state: GameState): PlayerId | null {
   return 'playerId' in state.pending ? state.pending.playerId : null;
 }
 
+/** True while a computer seat is acting on its own (not stalled). */
+export function useBotActing(actor: PlayerId | null): boolean {
+  const bots = useGame((s) => s.bots);
+  const stalled = useGame((s) => s.botStalled);
+  return !!actor && !!bots[actor] && stalled !== actor;
+}
+
 /** Whose private info may be shown right now. */
 export function useViewer(): PlayerId | null {
   const display = useGame((s) => s.display);
   const privacy = useGame((s) => s.settings.privacy);
   const revealedFor = useGame((s) => s.revealedFor);
+  const bots = useGame((s) => s.bots);
   const actor = actorOf(display);
+  // Never reveal a computer player's hand to the humans at the table.
+  if (actor && bots[actor]) return null;
   if (!privacy) return actor;
   return actor && actor === revealedFor ? actor : null;
 }
@@ -405,8 +494,9 @@ export function useCurtain(): PlayerId | null {
   const display = useGame((s) => s.display);
   const privacy = useGame((s) => s.settings.privacy);
   const revealedFor = useGame((s) => s.revealedFor);
+  const bots = useGame((s) => s.bots);
   const actor = actorOf(display);
-  if (screen !== 'game' || playing || !privacy || !actor) return null;
+  if (screen !== 'game' || playing || !privacy || !actor || bots[actor]) return null;
   return actor === revealedFor ? null : actor;
 }
 

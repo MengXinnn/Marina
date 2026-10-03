@@ -11,7 +11,8 @@ import {
   type Ware,
 } from '@manila/engine';
 import { zh } from '../i18n/zh';
-import { useCurtain, useGame, useView } from '../game/store';
+import { boardingOptions } from '../game/choices';
+import { legalActionsFor, useBotActing, useCurtain, useGame, useView } from '../game/store';
 import { PLAYER_COLORS } from '../scene/palette';
 import { WareChip } from './Hud';
 
@@ -25,6 +26,7 @@ export function ActionBar() {
   const skip = useGame((s) => s.skipAnimation);
   const curtain = useCurtain();
   const pending = view.pending;
+  const botActing = useBotActing('playerId' in pending ? pending.playerId : null);
   if (playing)
     return (
       <footer className="actionbar panel">
@@ -39,6 +41,21 @@ export function ActionBar() {
   if (curtain) return null;
   const actor =
     'playerId' in pending ? view.players.find((p) => p.id === pending.playerId) : undefined;
+  if (actor && botActing)
+    return (
+      <footer className="actionbar panel">
+        <div
+          className="actor"
+          style={{ '--pc': PLAYER_COLORS[actor.color].css } as React.CSSProperties}
+        >
+          <span className="swatch" />
+          {actor.name}
+        </div>
+        <div className="action-body">
+          <p className="muted">{zh.botThinking(actor.name)}</p>
+        </div>
+      </footer>
+    );
   return (
     <footer className="actionbar panel" key={`${view.turn}-${pending.type}`}>
       {actor && (
@@ -129,28 +146,7 @@ function PendingPanel({
         </>
       );
     case 'pirate-board':
-      return (
-        <>
-          <p>{zh.prompts.pirateBoard}</p>
-          <div className="row">
-            {pending.candidates.map((w) => (
-              <button
-                key={w}
-                className="btn"
-                onClick={() => send({ type: 'pirate-board', playerId: pending.playerId, ware: w })}
-              >
-                {zh.actions.board(zh.ware[w])}
-              </button>
-            ))}
-            <button
-              className="btn ghost"
-              onClick={() => send({ type: 'pirate-board', playerId: pending.playerId, ware: null })}
-            >
-              {zh.actions.stay}
-            </button>
-          </div>
-        </>
-      );
+      return <BoardPanel pending={pending} view={view} send={send} />;
     case 'pilot':
       return <PilotPanel pending={pending} view={view} send={send} />;
     case 'plunder-destination':
@@ -188,6 +184,51 @@ function PendingPanel({
     case 'game-over':
       return <p>{zh.prompts.gameOver}</p>;
   }
+}
+
+function BoardPanel({
+  pending,
+  view,
+  send,
+}: {
+  pending: Extract<PendingDecision, { type: 'pirate-board' }>;
+  view: PlayerView;
+  send: Send;
+}) {
+  const mode = useGame((s) => s.mode);
+  const state = useGame((s) => s.state);
+  const options = boardingOptions(pending, legalActionsFor(state, mode));
+  const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '';
+  return (
+    <>
+      <p>{zh.prompts.pirateBoard}</p>
+      <div className="row">
+        {options.map((a) => {
+          const ware = zh.ware[a.ware!];
+          const victim =
+            a.displaceSeat === undefined
+              ? null
+              : (view.punts.find((p) => p.ware === a.ware)?.seats[a.displaceSeat]?.occupant ??
+                null);
+          return (
+            <button
+              key={`${a.ware}-${a.displaceSeat ?? 'free'}`}
+              className="btn"
+              onClick={() => send(a)}
+            >
+              {victim ? zh.actions.boardDisplace(ware, nameOf(victim)) : zh.actions.board(ware)}
+            </button>
+          );
+        })}
+        <button
+          className="btn ghost"
+          onClick={() => send({ type: 'pirate-board', playerId: pending.playerId, ware: null })}
+        >
+          {zh.actions.stay}
+        </button>
+      </div>
+    </>
+  );
 }
 
 function BidPanel({

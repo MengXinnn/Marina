@@ -95,7 +95,7 @@ const bot = (v: PlayerView, legal: Action[], seed = 7) =>
   chooseBotAction(v, legal, { level: 'normal', random: lcg(seed) });
 
 describe('ai/probability', () => {
-  it('matches hand-computed single-roll outcomes', () => {
+  it('R5.7/R5.8 matches hand-computed single-roll outcomes', () => {
     expect(outlook(12, 1).arrive).toBeCloseTo(5 / 6);
     expect(outlook(12, 1).on13).toBeCloseTo(1 / 6);
     expect(outlook(7, 1)).toEqual({ arrive: 0, on13: 1 / 6, fail: 5 / 6 });
@@ -103,7 +103,7 @@ describe('ai/probability', () => {
     expect(outlook(14, 2).arrive).toBe(1);
   });
 
-  it('agrees with brute-force enumeration over three dice (R5.8 surplus is lost)', () => {
+  it('R5.8 agrees with brute-force enumeration over three dice (surplus is lost)', () => {
     for (const start of [0, 2, 5]) {
       let arrive = 0;
       let on13 = 0;
@@ -120,7 +120,7 @@ describe('ai/probability', () => {
     }
   });
 
-  it('computes Poisson-binomial tails', () => {
+  it('R5.4/R5.8 computes Poisson-binomial tails for port and shipyard slots', () => {
     expect(atLeast([0.5, 0.5], 1)).toBeCloseTo(0.75);
     expect(atLeast([0.5, 0.5], 2)).toBeCloseTo(0.25);
     expect(atLeast([1, 0, 1], 3)).toBe(0);
@@ -135,7 +135,7 @@ describe('ai/chooseBotAction', () => {
     blindPassenger: false,
   };
 
-  it('only ever returns one of the legal actions it was given', () => {
+  it('R5.2 only ever returns one of the legal actions it was given', () => {
     const legal = [place({ kind: 'insurance' }), place({ kind: 'punt', ware: 'jade' }), PASS];
     for (let seed = 1; seed < 30; seed++) {
       expect(legal).toContainEqual(bot(view({ pending: placing }), legal, seed));
@@ -145,14 +145,14 @@ describe('ai/chooseBotAction', () => {
     }
   });
 
-  it('is deterministic for a given random source', () => {
+  it('R1.6 is deterministic for a given random source', () => {
     const legal = [place({ kind: 'insurance' }), place({ kind: 'punt', ware: 'silk' }), PASS];
     expect(bot(view({ pending: placing }), legal, 3)).toEqual(
       bot(view({ pending: placing }), legal, 3),
     );
   });
 
-  it('takes a cheap seat on a punt that is almost home', () => {
+  it('R5.3 takes a cheap seat on a punt that is almost home', () => {
     const v = view({
       pending: placing,
       movementRound: 2,
@@ -167,7 +167,7 @@ describe('ai/chooseBotAction', () => {
     expect(bot(v, legal)).toEqual(place({ kind: 'punt', ware: 'ginseng' }));
   });
 
-  it('collects the insurance premium when no punt can fail any more', () => {
+  it('R5.5/R8.5 collects the insurance premium when no punt can fail any more', () => {
     const docked = (p: PuntState, slot: 'A' | 'B' | 'C'): PuntState => ({
       ...p,
       status: 'port',
@@ -186,7 +186,7 @@ describe('ai/chooseBotAction', () => {
     expect(bot(v, legal)).toEqual(place({ kind: 'insurance' }));
   });
 
-  it('passes instead of volunteering a loan or a losing placement', () => {
+  it('R5.2/R8.3 passes instead of volunteering a loan or a losing placement', () => {
     const v = view({
       pending: placing,
       movementRound: 2,
@@ -196,7 +196,7 @@ describe('ai/chooseBotAction', () => {
     expect(bot(v, [loan, place({ kind: 'port', slot: 'A' }), PASS])).toEqual(PASS);
   });
 
-  it('boards a punt waiting on 13 after the second roll (R6.2)', () => {
+  it('R6.2 boards a punt waiting on 13 after the second roll', () => {
     const v = view({
       pending: { type: 'pirate-board', playerId: 'p1', role: 'captain', candidates: ['jade'] },
       phase: 'pirates',
@@ -211,7 +211,7 @@ describe('ai/chooseBotAction', () => {
     expect(bot(v, legal)).toEqual(legal[0]);
   });
 
-  it('uses the strong-pirate variant to displace onto a full punt (R10)', () => {
+  it('R10 uses the strong-pirate variant to displace onto a full punt', () => {
     const v = view({
       pending: { type: 'pirate-board', playerId: 'p1', role: 'captain', candidates: ['silk'] },
       phase: 'pirates',
@@ -227,7 +227,7 @@ describe('ai/chooseBotAction', () => {
     expect(bot(v, legal)).toEqual(legal[0]);
   });
 
-  it('returns cached outlooks that callers cannot corrupt', () => {
+  it('R1.6 returns cached outlooks that callers cannot corrupt', () => {
     const o = outlook(9, 2);
     expect(Object.isFrozen(o)).toBe(true);
     expect(() => {
@@ -236,7 +236,7 @@ describe('ai/chooseBotAction', () => {
     expect(outlook(9, 2).arrive).toBeLessThan(1);
   });
 
-  it('uses the large pilot to push its own punt past 13 (R7.3)', () => {
+  it('R7.3 uses the large pilot to push its own punt past 13', () => {
     const v = view({
       pending: { type: 'pilot', playerId: 'p1', size: 'large' },
       phase: 'pilots',
@@ -252,7 +252,7 @@ describe('ai/chooseBotAction', () => {
     expect(bot(v, legal)).toEqual(legal[1]);
   });
 
-  it('bids cheaply for the office but does not overpay', () => {
+  it('R3.2/R3.3 bids cheaply for the office but does not overpay', () => {
     const auction = (minBid: number): PlayerView =>
       view({
         pending: { type: 'bid', playerId: 'p1', minBid, maxBid: 42 },

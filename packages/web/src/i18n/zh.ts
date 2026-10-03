@@ -25,6 +25,9 @@ export const zh = {
   shares: '股票',
   accomplices: '同伙',
   mortgaged: '已抵押',
+  bot: '电脑',
+  botLevel: { easy: '简单', normal: '普通' } as const,
+  botThinking: (name: string) => `电脑 ${name} 正在思考……`,
   hidden: '暗股',
   market: '黑市行情',
   supply: '剩余股票',
@@ -39,6 +42,7 @@ export const zh = {
   notices: {
     mock: '当前为演示数据：规则引擎完成后即可真正游玩',
     'engine-pending': '规则引擎尚未就绪，这一步暂时无法执行',
+    'bot-stalled': '电脑这一步无法行动，请由人代为操作或撤销',
   } as Record<string, string>,
   actions: {
     bid: '出价',
@@ -50,6 +54,7 @@ export const zh = {
     roll: '掷骰子',
     stay: '留在海盗船',
     board: (w: string) => `登上${w}船`,
+    boardDisplace: (w: string, name: string) => `登上${w}船（挤下${name}）`,
     toPort: '送去港口',
     toShipyard: '送去船坞',
     skipPilot: '不行动',
@@ -126,7 +131,7 @@ export function describeEvent(e: GameEvent, name: (id: string) => string): strin
     case 'punt-docked':
       return `${w(e.ware)}船 停入${slotName(e.dock, e.slot)}`;
     case 'pirate-boarded':
-      return `海盗 ${name(e.playerId)} 登上${w(e.ware)}船！`;
+      return `海盗 ${name(e.playerId)} 登上${w(e.ware)}船！${e.displaced ? `（${name(e.displaced)} 被挤下船）` : ''}`;
     case 'pirate-stayed':
       return `海盗 ${name(e.playerId)} 留在海盗船上`;
     case 'pirate-promoted':

@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { MAX_PLAYERS, MIN_PLAYERS, type PlayerColor, type PlayerSetup } from '@manila/engine';
+import {
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  type BotLevel,
+  type PlayerColor,
+  type PlayerSetup,
+} from '@manila/engine';
 import { zh } from '../i18n/zh';
 import { useGame } from '../game/store';
 import { hasSave } from '../game/save';
@@ -9,8 +15,15 @@ import { RulesSheet } from './RulesSheet';
 const COLORS: PlayerColor[] = ['red', 'blue', 'orange', 'purple', 'white'];
 const DEFAULT_NAMES = ['小红', '阿蓝', '橙子', '紫苏', '小白'];
 
-const freshPlayers = (n: number): PlayerSetup[] =>
-  Array.from({ length: n }, (_, i) => ({ name: DEFAULT_NAMES[i]!, color: COLORS[i]! }));
+/** A setup row: the engine's PlayerSetup plus whether the computer plays this seat. */
+type Row = PlayerSetup & { bot: BotLevel | null };
+
+const freshPlayers = (n: number): Row[] =>
+  Array.from({ length: n }, (_, i) => ({ name: DEFAULT_NAMES[i]!, color: COLORS[i]!, bot: null }));
+
+/** Human → easy computer → normal computer → human. */
+const nextSeat = (bot: BotLevel | null): BotLevel | null =>
+  bot === null ? 'normal' : bot === 'normal' ? 'easy' : null;
 
 export function SetupScreen() {
   const mode = useGame((s) => s.mode);
@@ -18,12 +31,12 @@ export function SetupScreen() {
   const setSettings = useGame((s) => s.setSettings);
   const startGame = useGame((s) => s.startGame);
   const resumeSaved = useGame((s) => s.resumeSaved);
-  const [players, setPlayers] = useState<PlayerSetup[]>(() => freshPlayers(4));
+  const [players, setPlayers] = useState<Row[]>(() => freshPlayers(4));
   const [pirateDisplace, setPirateDisplace] = useState(false);
   const [rules, setRules] = useState(false);
   const canResume = mode === 'live' && hasSave();
 
-  const update = (i: number, patch: Partial<PlayerSetup>) =>
+  const update = (i: number, patch: Partial<Row>) =>
     setPlayers((ps) => ps.map((p, k) => (k === i ? { ...p, ...patch } : p)));
   const pickColor = (i: number, color: PlayerColor) =>
     setPlayers((ps) => {
@@ -46,7 +59,7 @@ export function SetupScreen() {
       const color = COLORS.find((c) => !ps.some((p) => p.color === c))!;
       const name =
         DEFAULT_NAMES.find((n) => !ps.some((p) => p.name === n)) ?? `玩家${ps.length + 1}`;
-      return [...ps, { name, color }];
+      return [...ps, { name, color, bot: null }];
     });
   const remove = (i: number) =>
     setPlayers((ps) => (ps.length <= MIN_PLAYERS ? ps : ps.filter((_, k) => k !== i)));
@@ -79,6 +92,13 @@ export function SetupScreen() {
                 onChange={(e) => update(i, { name: e.target.value })}
                 aria-label={`玩家 ${i + 1} 名字`}
               />
+              <button
+                className={`btn tiny seat-toggle ${p.bot ? '' : 'ghost'}`}
+                onClick={() => update(i, { bot: nextSeat(p.bot) })}
+                title="切换：人类 / 电脑（普通）/ 电脑（简单）"
+              >
+                {p.bot ? `${zh.bot}·${zh.botLevel[p.bot]}` : '人类'}
+              </button>
               <span className="colors">
                 {COLORS.map((c) => (
                   <button
@@ -146,10 +166,16 @@ export function SetupScreen() {
             className="btn big"
             disabled={!valid}
             onClick={() =>
-              startGame({
-                players: players.map((p) => ({ ...p, name: p.name.trim() })),
-                rules: { pirateDisplace },
-              })
+              startGame(
+                {
+                  players: players.map(({ name, color }) => ({ name: name.trim(), color })),
+                  rules: { pirateDisplace },
+                },
+                // createGame assigns ids p1..pN in seat order (contract).
+                Object.fromEntries(
+                  players.flatMap((p, i) => (p.bot ? [[`p${i + 1}`, p.bot]] : [])),
+                ),
+              )
             }
           >
             开始游戏
@@ -165,7 +191,9 @@ export function SetupScreen() {
         </div>
         {rules && <RulesSheet onClose={() => setRules(false)} />}
         {mode === 'mock' && (
-          <p className="warn">规则引擎开发中：现在开始会进入固定的 4 人演示局。</p>
+          <p className="warn">
+            规则引擎开发中：现在开始会进入固定的 4 人演示局，电脑座位暂不生效。
+          </p>
         )}
       </div>
     </div>

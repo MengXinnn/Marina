@@ -11,7 +11,7 @@ import {
   type PlayerColor,
   type PlayerView,
 } from '@manila/engine';
-import { legalActionsFor, useCurtain, useGame, useView } from '../game/store';
+import { legalActionsFor, useBotActing, useCurtain, useGame, useView } from '../game/store';
 import {
   HARBOR_OFFICE,
   INSURANCE_STAND,
@@ -64,7 +64,8 @@ export function Board() {
   const playing = useGame((s) => s.playing);
   const curtain = useCurtain();
   const selectableAll = useSelectableTargets(view);
-  const selectable = playing || curtain ? new Set<string>() : selectableAll;
+  const botTurn = useBotActing('playerId' in view.pending ? view.pending.playerId : null);
+  const selectable = playing || curtain || botTurn ? new Set<string>() : selectableAll;
   const colors = useMemo(
     () =>
       Object.fromEntries(view.players.map((p) => [p.id, p.color])) as Record<string, PlayerColor>,
