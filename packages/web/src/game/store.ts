@@ -103,7 +103,8 @@ interface GameStore {
   state: GameState;
   /** What the board currently shows; lags behind `state` while events animate. */
   display: GameState;
-  /** Previous states for undo (the engine is pure and the RNG lives in the state, so undo is safe). */
+  /** Previous states for undo. Cleared by every dice roll: the RNG lives in the state, so
+   * stepping back over a roll would let a player see the dice and then change their move. */
   history: GameState[];
   playing: boolean;
   skip: boolean;
@@ -619,9 +620,11 @@ export const useGame = create<GameStore>((set, get) => {
       }
       const name = (id: string) => result.state.players.find((p) => p.id === id)?.name ?? id;
       const told = result.events.flatMap((e) => describeEvent(e, name) ?? []);
+      // Dice are a barrier for undo: rolling again from an earlier state gives the same result.
+      const rolled = result.events.some((e) => e.type === 'dice-rolled');
       set((s) => ({
         state: result.state,
-        history: [...history, state],
+        history: rolled ? [] : [...history, state],
         lastError: null,
         botStalled: null,
         table: [...s.table, ...told].slice(-40),
@@ -729,6 +732,12 @@ export function useBotActing(actor: PlayerId | null): boolean {
   return !!actor && !!bots[actor] && stalled !== actor;
 }
 
+/** The only human at the table, when everyone else is a computer seat. */
+export function soleHuman(state: GameState, bots: BotSeats): PlayerId | null {
+  const humans = state.players.filter((p) => !bots[p.id]);
+  return humans.length === 1 ? humans[0]!.id : null;
+}
+
 /** Whose private info may be shown right now. */
 export function useViewer(): PlayerId | null {
   const display = useGame((s) => s.display);
@@ -736,6 +745,9 @@ export function useViewer(): PlayerId | null {
   const revealedFor = useGame((s) => s.revealedFor);
   const bots = useGame((s) => s.bots);
   const actor = actorOf(display);
+  // A lone human never has to hide anything from the computers: always show their own hand.
+  const solo = soleHuman(display, bots);
+  if (solo) return solo;
   // Never reveal a computer player's hand to the humans at the table.
   if (actor && bots[actor]) return null;
   if (!privacy) return actor;
@@ -752,6 +764,8 @@ export function useCurtain(): PlayerId | null {
   const bots = useGame((s) => s.bots);
   const actor = actorOf(display);
   if (screen !== 'game' || playing || !privacy || !actor || bots[actor]) return null;
+  // Nobody to hand the device to.
+  if (soleHuman(display, bots)) return null;
   return actor === revealedFor ? null : actor;
 }
 

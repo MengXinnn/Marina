@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { MARKET_TRACK, WARES, type PlayerViewEntry, type Ware } from '@manila/engine';
 import { zh } from '../i18n/zh';
-import { useGame, useView, type ComputerSeat, type LlmSeatStats } from '../game/store';
+import {
+  soleHuman,
+  useGame,
+  useView,
+  type ComputerSeat,
+  type LlmSeatStats,
+} from '../game/store';
 import { isLlmSeat } from '../game/seats';
 import { useLlmSettings } from '../llm/settings';
 import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';
@@ -66,6 +72,8 @@ function GameControls() {
   const settings = useGame((s) => s.settings);
   const setSettings = useGame((s) => s.setSettings);
   const backToSetup = useGame((s) => s.backToSetup);
+  // With one human and only computers there is no device to hand over.
+  const solo = useGame((s) => soleHuman(s.state, s.bots) !== null);
   const nextSpeed = ({ 1: 2, 2: 4, 4: 1 } as const)[settings.speed];
   return (
     <span className="controls">
@@ -89,13 +97,15 @@ function GameControls() {
       >
         ×{settings.speed}
       </button>
-      <button
-        className="btn tiny ghost"
-        title="隐藏股票（交接设备）"
-        onClick={() => setSettings({ privacy: !settings.privacy })}
-      >
-        {settings.privacy ? '隐私开' : '隐私关'}
-      </button>
+      {!solo && (
+        <button
+          className="btn tiny ghost"
+          title="隐藏股票（交接设备）"
+          onClick={() => setSettings({ privacy: !settings.privacy })}
+        >
+          {settings.privacy ? '隐私开' : '隐私关'}
+        </button>
+      )}
       <button
         className="btn tiny ghost"
         onClick={() => {
