@@ -198,76 +198,41 @@ export function rowboatModel(length: number, width: number, sail: boolean): Voxe
 
 // ───────────────────────────── buildings & props ─────────────────────────────
 
-export function houseModel(
-  w: number,
-  d: number,
-  floors: number,
-  roof: number,
-  seed = 0,
-): VoxelGrid {
-  const wallH = floors * 6;
-  const roofH = Math.ceil(d / 2) + 1;
-  const g = new VoxelGrid(w, wallH + roofH + 1, d);
-  g.box(0, 0, 0, w - 1, wallH - 1, d - 1, (x, y, z) => {
-    const edge = x === 0 || x === w - 1 || z === 0 || z === d - 1;
-    if (!edge) return ENV.wallShade;
-    const fy = y % 6;
-    const front = z === d - 1;
-    const door = front && y < 4 && x >= Math.floor(w / 2) - 1 && x <= Math.floor(w / 2);
-    if (door && floors > 0 && y < 4) return ENV.woodDark;
-    const win =
-      (fy === 2 || fy === 3) && (front || z === 0 ? (x + seed) % 3 === 1 : (z + seed) % 3 === 1);
-    if (win && x > 0 && x < w - 1) return 0x2f5d80;
-    if (win && (x === 0 || x === w - 1) && z > 0 && z < d - 1) return 0x2f5d80;
-    return y === 0 ? ENV.wallShade : ENV.wall;
-  });
-  for (let k = 0; k < roofH; k++) {
-    const z0 = k - 1;
-    const z1 = d - k;
-    if (z0 > z1) break;
-    g.box(0, wallH + k, Math.max(0, z0), w - 1, wallH + k, Math.min(d - 1, z1), (_x, _y, z) =>
-      z === Math.max(0, z0) || z === Math.min(d - 1, z1) ? roof : k % 2 ? roof : roofDarken(roof),
-    );
-  }
-  return g;
-}
-
-function roofDarken(c: number): number {
-  const r = ((c >> 16) & 255) * 0.82;
-  const gg = ((c >> 8) & 255) * 0.82;
-  const b = (c & 255) * 0.82;
+/** Multiply a colour's brightness (default: the darker tile course of a roof). */
+export function roofDarken(c: number, f = 0.82): number {
+  const r = Math.min(255, ((c >> 16) & 255) * f);
+  const gg = Math.min(255, ((c >> 8) & 255) * f);
+  const b = Math.min(255, (c & 255) * f);
   return (Math.round(r) << 16) | (Math.round(gg) << 8) | Math.round(b);
 }
 
-export function churchModel(): VoxelGrid {
-  const g = new VoxelGrid(16, 34, 12);
-  const nave = houseModel(12, 12, 2, ENV.roof, 1);
-  copyInto(g, nave, 0, 0, 0);
-  g.box(11, 0, 3, 15, 24, 8, (x, y, z) => {
-    const edge = x === 11 || x === 15 || z === 3 || z === 8;
-    if (y >= 18 && y <= 20 && (x === 13 || z === 5 || z === 6) && edge) return 0x2a2a30; // belfry
-    return edge ? ENV.wall : ENV.wallShade;
-  });
-  g.box(11, 25, 3, 15, 25, 8, ENV.roofDark);
-  g.box(12, 26, 4, 14, 27, 7, ENV.roof);
-  g.box(13, 28, 5, 13, 32, 5, ENV.gold).box(12, 31, 5, 14, 31, 5, ENV.gold); // cross
-  return g;
-}
-
+/**
+ * Harbour master's watchtower (Capitanía del Puerto): stone base, whitewashed shaft, timber
+ * lookout gallery under a tiled cap, and a flagstaff flying the current harbour master's colour.
+ */
 export function towerModel(flag: number): VoxelGrid {
-  const g = new VoxelGrid(7, 30, 7);
-  g.box(0, 0, 0, 6, 16, 6, (x, y, z) => {
-    const edge = x === 0 || x === 6 || z === 0 || z === 6;
+  const g = new VoxelGrid(9, 34, 9);
+  g.box(1, 0, 1, 7, 3, 7, (x, y, z) => ((x + y + z) % 5 === 0 ? ENV.adobeLight : ENV.adobeDark));
+  g.box(1, 4, 1, 7, 16, 7, (x, y, z) => {
+    const edge = x === 1 || x === 7 || z === 1 || z === 7;
     if (!edge) return ENV.wallShade;
-    if (y % 5 === 3 && (x === 3 || z === 3)) return 0x2f5d80;
-    return y < 2 ? ENV.rock : ENV.wall;
+    if (y === 4 || y === 16) return ENV.adobeLight;
+    if ((y === 8 || y === 9 || y === 13) && (x === 4 || z === 4)) return ENV.window;
+    return ENV.wall;
   });
-  g.box(0, 17, 0, 6, 17, 6, ENV.woodDark);
-  g.box(0, 18, 0, 6, 18, 6, (x, _y, z) =>
-    x === 0 || x === 6 || z === 0 || z === 6 ? ENV.wood : null,
+  g.box(4, 0, 7, 4, 2, 7, ENV.woodDark); // door
+  // Lookout gallery: deck, railing, corner posts, tiled pyramid cap.
+  g.box(0, 17, 0, 8, 17, 8, ENV.woodDark);
+  g.box(0, 18, 0, 8, 18, 8, (x, _y, z) =>
+    x === 0 || x === 8 || z === 0 || z === 8 ? ((x + z) % 2 ? ENV.wood : ENV.woodDark) : null,
   );
-  g.box(3, 18, 3, 3, 28, 3, ENV.woodDark); // flagpole
-  g.box(4, 24, 3, 6, 27, 3, flag);
+  for (const x of [1, 7]) for (const z of [1, 7]) g.box(x, 18, z, x, 21, z, ENV.woodDark);
+  g.box(2, 18, 2, 6, 20, 6, (x, _y, z) => (x === 4 || z === 4 ? ENV.window : ENV.wall));
+  for (let k = 0; k < 4; k++)
+    g.box(k, 22 + k, k, 8 - k, 22 + k, 8 - k, k % 2 ? ENV.roof : ENV.roofDark);
+  g.box(4, 26, 4, 4, 33, 4, ENV.woodDark); // flagstaff
+  g.box(5, 29, 4, 7, 32, 4, flag);
+  g.set(4, 34 - 1, 4, ENV.gold);
   return g;
 }
 
@@ -326,18 +291,33 @@ export function crateModel(color: number, dark: number): VoxelGrid {
   return g;
 }
 
+/** Bodega (stone warehouse): tuff walls, two big cargo doors under ware-coloured shades, tiled roof. */
 export function warehouseModel(): VoxelGrid {
-  const g = new VoxelGrid(22, 16, 14);
+  const g = new VoxelGrid(22, 17, 15);
   g.box(0, 0, 0, 21, 8, 13, (x, y, z) => {
     const edge = x === 0 || x === 21 || z === 0 || z === 13;
-    if (!edge) return ENV.woodDark;
-    if (z === 13 && x >= 7 && x <= 14 && y <= 6)
-      return y === 6 || x === 7 || x === 14 ? ENV.woodDark : 0x3a2618;
-    return x % 4 === 0 ? ENV.woodDark : ENV.wood;
+    if (!edge) return ENV.adobeDark;
+    const door = z === 13 && ((x >= 3 && x <= 8) || (x >= 13 && x <= 18)) && y <= 5;
+    if (door)
+      return x === 3 || x === 8 || x === 13 || x === 18 || y === 5 ? ENV.woodDark : 0x3a2618;
+    if (y === 0) return ENV.adobeDark;
+    if (y === 7 && x % 3 === 1) return ENV.windowDark;
+    return (x * 7 + y * 13 + z * 5) % 11 === 0 ? ENV.adobeLight : ENV.adobe;
   });
+  // Striped awnings over the doors in the four ware colours.
+  const wares = Object.values(WARE_COLORS);
+  for (const [x0, i0] of [
+    [3, 0],
+    [13, 2],
+  ] as const)
+    g.box(x0, 6, 14, x0 + 5, 6, 14, (x) => wares[i0 + ((x - x0) >> 1 >= 2 ? 1 : 0)]!.main);
   for (let k = 0; k < 7; k++)
-    g.box(0, 9 + k, k, 21, 9 + k, 13 - k, (_x, _y, z) =>
-      z === k || z === 13 - k ? ENV.roofDark : ENV.roof,
+    g.box(0, 9 + k, k, 21, 9 + k, 13 - k, (x, _y, z) =>
+      x === 0 || x === 21
+        ? ENV.roofDark
+        : z === k || z === 13 - k
+          ? ENV.roof
+          : roofDarken(ENV.roof),
     );
   return g;
 }
@@ -374,13 +354,6 @@ export function barrelModel(): VoxelGrid {
     (x === 0 || x === 2) && (z === 0 || z === 2) ? null : y === 1 ? ENV.iron : ENV.wood,
   );
   return g;
-}
-
-function copyInto(dst: VoxelGrid, src: VoxelGrid, ox: number, oy: number, oz: number): void {
-  for (let z = 0; z < src.d; z++)
-    for (let y = 0; y < src.h; y++)
-      for (let x = 0; x < src.w; x++)
-        if (src.filled(x, y, z)) dst.set(x + ox, y + oy, z + oz, src.color(x, y, z));
 }
 
 // ───────────────────────────── dice ─────────────────────────────
