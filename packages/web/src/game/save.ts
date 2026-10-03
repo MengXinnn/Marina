@@ -1,4 +1,5 @@
-import { CONTRACT_VERSION, type BotLevel, type GameState, type PlayerId } from '@manila/engine';
+import { CONTRACT_VERSION, type GameState } from '@manila/engine';
+import { sanitizeSeats, type BotSeats } from './seats';
 
 const KEY = 'manila.save.v1';
 
@@ -6,12 +7,12 @@ interface SaveFile {
   savedAt: string;
   state: GameState;
   /** Seats played by the computer (web-only setting, not part of the engine state). */
-  bots?: Partial<Record<PlayerId, BotLevel>>;
+  bots?: BotSeats;
 }
 
 export interface Saved {
   state: GameState;
-  bots: Partial<Record<PlayerId, BotLevel>>;
+  bots: BotSeats;
 }
 
 /** Saves are only reloaded when the contract's major version still matches. */
@@ -33,7 +34,7 @@ export function loadSave(): Saved | null {
     const file = JSON.parse(raw) as SaveFile;
     if (major(file.state.contractVersion) !== major(CONTRACT_VERSION)) return null;
     if (file.state.phase === 'game-over') return null;
-    return { state: file.state, bots: file.bots ?? {} };
+    return { state: file.state, bots: sanitizeSeats(file.bots) };
   } catch {
     return null;
   }

@@ -86,8 +86,8 @@ function easyPick(choices: Action[], random: () => number): Action {
 
 // ───────────── auction ─────────────
 
-/** Rough worth of the harbour master's office to `me`. */
-function harborMasterValue(view: PlayerView, me: PlayerId): number {
+/** Rough worth of the harbour master's office to `me`, in pesos (what a normal bot bids up to). */
+export function harborMasterValue(view: PlayerView, me: PlayerId): number {
   const owned = WARES.filter((w) => myShares(view, me, w) > 0).length;
   const bestBuy = Math.max(
     0,

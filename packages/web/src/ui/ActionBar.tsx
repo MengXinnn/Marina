@@ -2,6 +2,7 @@ import type { Action, PendingDecision } from '@manila/engine';
 import { zh } from '../i18n/zh';
 import { useBotActing, useCurtain, useGame, useView } from '../game/store';
 import { PLAYER_COLORS } from '../scene/palette';
+import { BotThinking } from './BotThinking';
 
 /** Bottom prompt strip: who acts and what to do. It only collects "pass" — the engine validates. */
 export function ActionBar() {
@@ -39,7 +40,7 @@ export function ActionBar() {
           {actor.name}
         </div>
         <div className="action-body">
-          <p className="muted">{zh.botThinking(actor.name)}</p>
+          <BotThinking playerId={actor.id} name={actor.name} />
         </div>
       </footer>
     );
