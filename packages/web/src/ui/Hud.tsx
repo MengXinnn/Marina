@@ -1,13 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MARKET_TRACK, WARES, type PlayerViewEntry, type Ware } from '@manila/engine';
 import { zh } from '../i18n/zh';
-import {
-  soleHuman,
-  useGame,
-  useView,
-  type ComputerSeat,
-  type LlmSeatStats,
-} from '../game/store';
+import { soleHuman, useGame, useView, type ComputerSeat, type LlmSeatStats } from '../game/store';
 import { isLlmSeat } from '../game/seats';
 import { useLlmSettings } from '../llm/settings';
 import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';

@@ -26,6 +26,7 @@ import { emitFxStep } from './fx';
 import { createMockState, mockDemoScript, mockView } from './mock';
 import { patchDisplay } from './present';
 import { clearSave, loadSave, writeSave } from './save';
+import { gameStats, stateAt } from './stats';
 import { isLlmSeat, type BotSeats } from './seats';
 
 export type { BotSeats, ComputerSeat, LlmSeat } from './seats';
@@ -82,6 +83,17 @@ export interface Settings {
   speed: 1 | 2 | 4;
 }
 
+export interface ReplayState {
+  actions: Action[];
+  /** Next action to play. */
+  index: number;
+  /** The finished game to return to. */
+  final: GameState;
+}
+
+/** Pause between replayed moves (ms at speed ×1). */
+const REPLAY_PAUSE_MS = 350;
+
 export interface LogLine {
   id: number;
   text: string;
@@ -106,6 +118,11 @@ interface GameStore {
   /** Previous states for undo. Cleared by every dice roll: the RNG lives in the state, so
    * stepping back over a roll would let a player see the dice and then change their move. */
   history: GameState[];
+  /** Every action applied since the game started (for statistics and replays). A game resumed
+   * from a save older than this field has fewer actions than `state.turn`. */
+  actions: Action[];
+  /** Set while a finished game is being replayed; input is ignored until it ends. */
+  replay: ReplayState | null;
   playing: boolean;
   skip: boolean;
   log: LogLine[];
@@ -130,6 +147,10 @@ interface GameStore {
   backToSetup(): void;
   dispatch(action: Action): void;
   undo(): void;
+  /** Replay the finished game from the start of `voyage`. */
+  startReplay(voyage: number): void;
+  /** Stop a replay and go back to the final standings. */
+  stopReplay(): void;
   reveal(): void;
   skipAnimation(): void;
   setSettings(patch: Partial<Settings>): void;
@@ -323,7 +344,11 @@ export const useGame = create<GameStore>((set, get) => {
   function scheduleBot(): void {
     if (botTimer) clearTimeout(botTimer);
     botTimer = null;
-    const { mode, screen, playing, state, bots, settings } = get();
+    const { mode, screen, playing, state, bots, settings, replay } = get();
+    if (replay && screen === 'game' && !playing) {
+      botTimer = setTimeout(replayStep, REPLAY_PAUSE_MS / settings.speed);
+      return;
+    }
     const actor = actorOf(state);
     if (mode !== 'live' || screen !== 'game' || playing || !actor) return;
     const seat = bots[actor];
@@ -340,6 +365,20 @@ export const useGame = create<GameStore>((set, get) => {
       if (s.state.turn !== turn || s.playing || s.screen !== 'game') return;
       builtInMove(actor, turn, level);
     }, BOT_THINK_MS / settings.speed);
+  }
+
+  /** Play the next recorded action of a replay, or return to the final standings. */
+  function replayStep(): void {
+    const { replay, state, playing } = get();
+    if (!replay || playing) return;
+    const action = replay.actions[replay.index];
+    const result = action ? applyAction(state, action) : null;
+    if (!result?.ok) {
+      get().stopReplay();
+      return;
+    }
+    set({ state: result.state, replay: { ...replay, index: replay.index + 1 } });
+    void animate(result.events, result.state);
   }
 
   /** The heuristic bot plays `actor`'s pending decision right now. */
@@ -524,6 +563,8 @@ export const useGame = create<GameStore>((set, get) => {
     state: initial.state,
     display: initial.state,
     history: [],
+    actions: [],
+    replay: null,
     playing: false,
     skip: false,
     log: [],
@@ -551,6 +592,8 @@ export const useGame = create<GameStore>((set, get) => {
         state,
         display: state,
         history: [],
+        actions: [],
+        replay: null,
         playing: false,
         dice: null,
         floaters: [],
@@ -563,7 +606,7 @@ export const useGame = create<GameStore>((set, get) => {
         table: [],
         notice: mode === 'mock' ? 'mock' : null,
       });
-      if (mode === 'live') writeSave(state, bots);
+      if (mode === 'live') writeSave(state, bots, []);
       scheduleBot();
     },
 
@@ -577,6 +620,8 @@ export const useGame = create<GameStore>((set, get) => {
         state: saved.state,
         display: saved.state,
         history: [],
+        actions: saved.actions,
+        replay: null,
         playing: false,
         log: [{ id: nextId++, text: '—— 继续上局 ——' }],
         revealedFor: null,
@@ -593,12 +638,20 @@ export const useGame = create<GameStore>((set, get) => {
       runToken++;
       if (botTimer) clearTimeout(botTimer);
       cancelLlm();
-      set({ screen: 'setup', playing: false, dice: null });
+      // Leaving mid-replay: the board behind the setup screen shows the finished game.
+      const { replay } = get();
+      set({
+        screen: 'setup',
+        playing: false,
+        dice: null,
+        replay: null,
+        ...(replay ? { state: replay.final, display: replay.final } : {}),
+      });
     },
 
     dispatch(action) {
-      const { mode, state, history, playing } = get();
-      if (playing) return;
+      const { mode, state, history, playing, replay } = get();
+      if (playing || replay) return;
       if (mode === 'mock') {
         set({ notice: 'engine-pending' });
         return;
@@ -625,20 +678,21 @@ export const useGame = create<GameStore>((set, get) => {
       set((s) => ({
         state: result.state,
         history: rolled ? [] : [...history, state],
+        actions: [...s.actions, action],
         lastError: null,
         botStalled: null,
         table: [...s.table, ...told].slice(-40),
       }));
       if (result.state.phase === 'game-over') clearSave();
-      else writeSave(result.state, get().bots);
+      else writeSave(result.state, get().bots, get().actions);
       // Let an AI seat that acts next start thinking while this move animates.
       startLlmJob();
       void animate(result.events, result.state);
     },
 
     undo() {
-      const { history, playing, bots } = get();
-      if (playing || history.length === 0) return;
+      const { history, playing, bots, replay } = get();
+      if (playing || replay || history.length === 0) return;
       // Step back over computer turns to the last decision a human made.
       let i = history.length - 1;
       while (i > 0 && bots[actorOf(history[i]!) ?? ''] !== undefined) i--;
@@ -651,12 +705,49 @@ export const useGame = create<GameStore>((set, get) => {
         state: prev,
         display: prev,
         history: history.slice(0, i),
+        actions: get().actions.slice(0, prev.turn),
         dice: null,
         botStalled: null,
         // The models' history would describe moves that no longer happened.
         table: [],
       });
-      writeSave(prev, bots);
+      writeSave(prev, bots, get().actions);
+    },
+
+    startReplay(voyage) {
+      const { state, actions, playing, replay } = get();
+      if (playing || replay || state.phase !== 'game-over' || actions.length !== state.turn) return;
+      const stats = gameStats(state.config, actions);
+      const index = stats?.voyageStarts[voyage - 1];
+      if (index === undefined) return;
+      runToken++;
+      if (botTimer) clearTimeout(botTimer);
+      const start = stateAt(state.config, actions, index);
+      set({
+        state: start,
+        display: start,
+        replay: { actions, index, final: state },
+        dice: null,
+        floaters: [],
+        log: [{ id: nextId++, text: `—— 回放：第 ${voyage} 航次起 ——` }],
+      });
+      scheduleBot();
+    },
+
+    stopReplay() {
+      const { replay } = get();
+      if (!replay) return;
+      runToken++;
+      if (botTimer) clearTimeout(botTimer);
+      set({
+        state: replay.final,
+        display: replay.final,
+        replay: null,
+        playing: false,
+        skip: false,
+        dice: null,
+        log: [...get().log, { id: nextId++, text: '—— 回放结束 ——' }],
+      });
     },
 
     reveal() {
@@ -729,6 +820,9 @@ export function actorOf(state: GameState): PlayerId | null {
 export function useBotActing(actor: PlayerId | null): boolean {
   const bots = useGame((s) => s.bots);
   const stalled = useGame((s) => s.botStalled);
+  const replaying = useGame((s) => s.replay !== null);
+  // A replay plays itself: nobody at the table acts.
+  if (replaying) return !!actor;
   return !!actor && !!bots[actor] && stalled !== actor;
 }
 
@@ -744,7 +838,9 @@ export function useViewer(): PlayerId | null {
   const privacy = useGame((s) => s.settings.privacy);
   const revealedFor = useGame((s) => s.revealedFor);
   const bots = useGame((s) => s.bots);
+  const replaying = useGame((s) => s.replay !== null);
   const actor = actorOf(display);
+  if (replaying) return null;
   // A lone human never has to hide anything from the computers: always show their own hand.
   const solo = soleHuman(display, bots);
   if (solo) return solo;
@@ -763,7 +859,8 @@ export function useCurtain(): PlayerId | null {
   const revealedFor = useGame((s) => s.revealedFor);
   const bots = useGame((s) => s.bots);
   const actor = actorOf(display);
-  if (screen !== 'game' || playing || !privacy || !actor || bots[actor]) return null;
+  const replaying = useGame((s) => s.replay !== null);
+  if (screen !== 'game' || playing || replaying || !privacy || !actor || bots[actor]) return null;
   // Nobody to hand the device to.
   if (soleHuman(display, bots)) return null;
   return actor === revealedFor ? null : actor;
