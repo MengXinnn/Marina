@@ -2,10 +2,14 @@
 
 桌游 **Manila**（Franz-Benno Delonge，Zoch 2005）的 3D 体素像素风网页版。3–5 人同一设备轮流游玩（hotseat），纯本地运行。
 
+**在线试玩：<https://mengxinnn.github.io/Marina/>**（手机/平板浏览器可"添加到主屏幕"，之后离线也能玩）
+
 ```bash
 npm install
 npm run dev      # http://localhost:5173
 ```
+
+`main` 每次更新都会由 `.github/workflows/pages.yml` 自动构建并发布到 GitHub Pages（首次需要在仓库 Settings → Pages 把 Source 设为 GitHub Actions）。
 
 | 包 | 说明 | 负责 |
 |---|---|---|
