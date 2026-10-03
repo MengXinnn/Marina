@@ -95,4 +95,10 @@ export const SHIPWRIGHT_SHED: [number, number] = [11.6, 9.7];
 /** West wharf (plank pier) where the cargo is loaded. */
 export const WEST_WHARF: [number, number] = [-1.15, 0.4];
 
+/** Ware crates outside the warehouse, in WARES order. */
+export const CRATE = (i: number): [number, number] => [-2.7, -1.0 + i * 0.55];
+
+/** Anchor of the in-scene notice board used before the punts are loaded (auction, shares). */
+export const WORLD_PANEL: [number, number, number] = [6.9, 1.2, 0.4];
+
 export const CAMERA_TARGET: [number, number, number] = [10.2, 0, -1.0];

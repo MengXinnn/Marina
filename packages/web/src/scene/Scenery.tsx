@@ -4,6 +4,7 @@ import { ENV, WARE_COLORS } from './palette';
 import {
   ADUANA,
   CHURCH,
+  CRATE,
   FORT,
   HARBOR_OFFICE,
   HULL_FRAME,
@@ -216,7 +217,7 @@ export function Scenery() {
         </group>
       ))}
       {WARES.map((w, i) => (
-        <OnGround key={w} x={-2.7} z={-1.0 + i * 0.55}>
+        <OnGround key={w} x={CRATE(i)[0]} z={CRATE(i)[1]}>
           <VoxelMesh
             model={`crate-${w}`}
             build={() => crateModel(WARE_COLORS[w].main, WARE_COLORS[w].dark)}

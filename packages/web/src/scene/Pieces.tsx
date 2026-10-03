@@ -25,7 +25,9 @@ import {
   standModel,
   type StandKind,
 } from './models';
+import { SpotTip } from './SpotTip';
 import { VoxelGrid } from './voxel';
+import type { Spot } from '../i18n/spots';
 import { VoxelMesh } from './VoxelMesh';
 
 export function Meeple({
@@ -72,33 +74,41 @@ function arrowModel(main: number, dark: number): VoxelGrid {
   return g;
 }
 
-interface Pickable {
+export interface Pickable {
   /** Spot can be chosen by the acting player right now. */
   selectable?: boolean;
   actorColor?: PlayerColor;
   onPick?: () => void;
+  /** What the hover card describes; no card without it. */
+  spot?: Spot;
+  /** Extra hover-card line saying what a click does right now. */
+  hint?: string;
 }
 
-function usePick({ selectable, onPick }: Pickable) {
-  const [hot, setHot] = useState(false);
-  const handlers = selectable
-    ? {
-        onPointerOver: (e: { stopPropagation(): void }) => {
-          e.stopPropagation();
-          setHot(true);
-          document.body.style.cursor = 'pointer';
-        },
-        onPointerOut: () => {
-          setHot(false);
-          document.body.style.cursor = '';
-        },
-        onClick: (e: { stopPropagation(): void }) => {
-          e.stopPropagation();
-          onPick?.();
-        },
-      }
-    : {};
-  return { hot: hot && !!selectable, handlers };
+/** Hover always shows the spot card; clicks only go through while the spot is selectable. */
+export function usePick({ selectable, onPick }: Pick<Pickable, 'selectable' | 'onPick'>) {
+  const [hover, setHover] = useState(false);
+  useEffect(() => {
+    if (!hover) return;
+    document.body.style.cursor = selectable ? 'pointer' : 'help';
+    return () => {
+      document.body.style.cursor = '';
+    };
+  }, [hover, selectable]);
+  const handlers = {
+    onPointerOver: (e: { stopPropagation(): void }) => {
+      e.stopPropagation();
+      setHover(true);
+    },
+    onPointerOut: () => setHover(false),
+    onClick: (e: { stopPropagation(): void }) => {
+      if (!selectable) return;
+      e.stopPropagation();
+      setHover(false);
+      onPick?.();
+    },
+  };
+  return { hover, hot: hover && !!selectable, handlers };
 }
 
 /** Accomplice stand with its printed cost; shows the occupant on top. */
@@ -117,8 +127,8 @@ export function Stand({
   children?: ReactNode;
 } & Pickable &
   ThreeElements['group']) {
-  const { selectable, actorColor, onPick, ...group } = pick;
-  const { hot, handlers } = usePick({ selectable, onPick });
+  const { selectable, actorColor, onPick, spot, hint, ...group } = pick;
+  const { hover, hot, handlers } = usePick({ selectable, onPick });
   return (
     <group scale={PIECE_SCALE.stand} {...group}>
       <group {...handlers}>
@@ -127,9 +137,11 @@ export function Stand({
         <mesh position-y={0.4} visible={false}>
           <boxGeometry args={[0.8, 0.8, 0.8]} />
         </mesh>
+        {/* The occupant and the floating marker answer hover too. */}
+        {occupant && <Meeple key={occupant} color={occupant} pirate={pirateHat} position-y={0.2} />}
+        {selectable && actorColor && !occupant && <Marker color={actorColor} hot={hot} />}
       </group>
-      {occupant && <Meeple key={occupant} color={occupant} pirate={pirateHat} position-y={0.2} />}
-      {selectable && actorColor && !occupant && <Marker color={actorColor} hot={hot} />}
+      {hover && spot && <SpotTip spot={spot} y={1.5} actionable={!!selectable} hint={hint} />}
       {children}
     </group>
   );
@@ -182,9 +194,9 @@ export function Punt({
   bobPhase?: number;
 } & Pickable &
   ThreeElements['group']) {
-  const { selectable, actorColor, onPick, ...group } = pick;
+  const { selectable, actorColor, onPick, spot, hint, ...group } = pick;
   const bob = useRef<THREE.Group>(null);
-  const { hot, handlers } = usePick({ selectable, onPick });
+  const { hover, hot, handlers } = usePick({ selectable, onPick });
   const docked = punt.status !== 'sailing';
 
   // Sail in from the west harbour on mount, then follow every displayed change.
@@ -215,7 +227,9 @@ export function Punt({
   });
   const seatX = puntSeatVoxelX(WARE_INFO[punt.ware].seatCosts.length);
   const deckY = PUNT_FLOAT_Y + PUNT_DECK_VOXELS * PROP_VOXEL;
-  const nextFree = punt.seats.findIndex((s) => !s.occupant);
+  const free = punt.seats.findIndex((s) => !s.occupant);
+  // Boarding / plunder decisions point at the punt itself, not at a free seat.
+  const markAt = free >= 0 ? free : Math.floor(punt.seats.length / 2);
   return (
     <group ref={motion.ref}>
       <group {...group}>
@@ -235,10 +249,10 @@ export function Punt({
               />
             ) : null,
           )}
-          {selectable && actorColor && nextFree >= 0 && (
+          {selectable && actorColor && (
             <group
               position={[
-                (Math.floor(seatX[nextFree]!) + 0.5 - PUNT_LENGTH / 2) * PROP_VOXEL,
+                (Math.floor(seatX[markAt]!) + 0.5 - PUNT_LENGTH / 2) * PROP_VOXEL,
                 deckY - 0.3,
                 0,
               ]}
@@ -246,6 +260,7 @@ export function Punt({
               <Marker color={actorColor} hot={hot} />
             </group>
           )}
+          {hover && spot && <SpotTip spot={spot} y={1.3} actionable={!!selectable} hint={hint} />}
         </group>
       </group>
     </group>
