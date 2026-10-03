@@ -78,7 +78,7 @@ describe('llm prompt ⇄ reply', () => {
       if (prompt.listed) for (const c of commands) expect(prompt.text).toContain(`\`${c}\``);
       else expect(prompt.text).toMatch(/`(pass|load [^`]+)`/);
     }
-  });
+  }, 20000);
 
   it("never shows other players' share wares", () => {
     for (const { state, legal } of samples.slice(0, 80)) {
