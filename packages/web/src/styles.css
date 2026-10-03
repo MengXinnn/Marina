@@ -34,10 +34,6 @@ body {
   font-smooth: never;
   user-select: none;
 }
-canvas {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
 
 /* ── layout ── */
 .hud {
@@ -280,7 +276,7 @@ canvas {
   flex: 1;
 }
 .action-body p {
-  margin: 0 0 6px;
+  margin: 0;
 }
 .row {
   display: flex;
@@ -670,4 +666,199 @@ canvas {
   left: 50%;
   bottom: 96px;
   transform: translateX(-50%);
+}
+
+/* ── sound settings popover ── */
+.sound {
+  position: relative;
+  display: inline-flex;
+}
+.sound-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  min-width: 220px;
+  white-space: nowrap;
+}
+.setup-actions .sound-pop {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+.sound-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sound-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--gold);
+}
+.sound-note {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* ── in-scene DOM (drei <Html>): anchored at bottom-centre to a world point ── */
+.world-panel,
+.spot-tip {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: translate(-50%, 0);
+  white-space: nowrap;
+}
+.world-panel {
+  /* parchment notice pinned in the scene, edged in the acting player's colour */
+  --ink-dim: #7a5a3a;
+  padding: 8px 12px;
+  color: #3a2618;
+  background: #f3e2b8;
+  border: var(--px) solid #5a3a22;
+  box-shadow:
+    inset -3px -3px 0 #d9c08a,
+    inset 3px 3px 0 #fff3d6,
+    0 0 0 3px var(--pc, var(--gold)),
+    5px 5px 0 rgba(0, 0, 0, 0.35);
+}
+.world-panel .row {
+  flex-wrap: nowrap;
+}
+.world-panel.panel h4 {
+  color: #8a3b12;
+}
+.world-panel .ok {
+  color: #2f7a3a;
+}
+.world-panel .warn {
+  color: #b2401f;
+}
+.world-panel .stepper .value {
+  color: #3a2618;
+  background: #fff3d6;
+  border-color: #5a3a22;
+}
+.world-panel.shifted::after,
+.spot-tip.shifted::after {
+  display: none;
+}
+.world-panel::after {
+  border-top-color: var(--pc, #5a3a22) !important;
+}
+.world-panel::after,
+.spot-tip::after {
+  /* little pointer towards the anchor */
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-top-color: var(--edge);
+  border-bottom: 0;
+}
+.world-panel h4,
+.spot-tip h4 {
+  margin: 0 0 4px;
+  color: var(--gold);
+  font-size: 12px;
+}
+.world-panel p {
+  margin: 0 0 6px;
+}
+.world-panel .row + .row {
+  margin-top: 6px;
+}
+.small {
+  font-size: 12px;
+}
+.spot-tip {
+  pointer-events: none;
+  width: 300px;
+  white-space: normal;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.spot-tip ul {
+  margin: 4px 0 0;
+  padding-left: 14px;
+  color: var(--ink-dim);
+}
+.spot-tip li + li {
+  margin-top: 2px;
+}
+.spot-status {
+  margin: 0 0 4px;
+}
+.spot-hint {
+  margin: 4px 0 0;
+  color: var(--gold);
+}
+.spot-advice {
+  margin: 4px 0;
+  padding: 4px 6px;
+  background: var(--panel-2);
+  border: var(--px) solid var(--edge);
+}
+.spot-advice .row {
+  gap: 10px;
+}
+.spot-advice b {
+  font-weight: normal;
+  font-size: 12px;
+}
+
+/* share crates on the notice board */
+.crate-btn {
+  font: inherit;
+  display: grid;
+  justify-items: center;
+  width: 64px;
+  padding: 4px 2px;
+  color: #2a1a0e;
+  cursor: pointer;
+  background: var(--wc);
+  border: var(--px) solid var(--edge);
+  box-shadow:
+    inset -3px -3px 0 rgba(0, 0, 0, 0.25),
+    inset 3px 3px 0 rgba(255, 255, 255, 0.35);
+}
+.crate-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+.crate-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.crate-price {
+  font-size: 24px;
+  line-height: 1.1;
+}
+.crate-left {
+  opacity: 0.75;
+}
+
+/* lane ware picker while loading, pilot arrows above punts */
+.lane-ware,
+.pilot-arrows {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  background: rgba(6, 26, 38, 0.75);
+  border: var(--px) solid var(--edge);
+  white-space: nowrap;
+}
+.pilot-delta {
+  min-width: 24px;
+  text-align: center;
+  color: var(--ink-dim);
+}
+.pilot-delta.on {
+  color: var(--gold);
 }

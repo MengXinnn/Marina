@@ -4,17 +4,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { CAMERA_TARGET } from './layout';
 import { Harbor } from './Harbor';
 
-/** Render height in "art pixels"; the canvas is upscaled with nearest-neighbour for the pixel look. */
-const TARGET_PIXEL_HEIGHT = 400;
+/**
+ * Render at the display's native resolution (capped at 2× to keep fill-rate sane on
+ * high-DPI phones) with MSAA on. The voxel look comes from the geometry itself; the
+ * previous low-res nearest-neighbour upscale only added stair-stepped edges.
+ */
+const MAX_DPR = 2;
 
 function usePixelRatio(): number {
-  const [h, setH] = useState(() => window.innerHeight);
+  const [dpr, setDpr] = useState(() => Math.min(MAX_DPR, window.devicePixelRatio || 1));
   useEffect(() => {
-    const onResize = () => setH(window.innerHeight);
+    // devicePixelRatio changes with browser zoom or when moving to another monitor.
+    const onResize = () => setDpr(Math.min(MAX_DPR, window.devicePixelRatio || 1));
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  return Math.min(1, TARGET_PIXEL_HEIGHT / h);
+  return dpr;
 }
 
 export function GameCanvas() {
@@ -25,7 +30,7 @@ export function GameCanvas() {
     [],
   );
   return (
-    <Canvas dpr={dpr} shadows gl={{ antialias: false }} style={{ position: 'fixed', inset: 0 }}>
+    <Canvas dpr={dpr} shadows gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
       <color attach="background" args={['#0f4c6e']} />
       <OrthographicCamera
         makeDefault

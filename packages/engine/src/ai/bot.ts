@@ -15,7 +15,7 @@ import type {
   PlayerView,
   Ware,
 } from '../contract/types';
-import { cloneView, myShares, rollsLeft, stakeValue } from './evaluate';
+import { cloneView, myShares, rollsLeft, stakeValue, withPlacement } from './evaluate';
 import { outlook } from './probability';
 
 export type BotLevel = 'easy' | 'normal';
@@ -144,33 +144,6 @@ function placementRoundsLeft(view: PlayerView): number {
   if (view.pending.type !== 'place-accomplice') return 0;
   const total = (VOYAGE_SCHEDULE[view.players.length] ?? []).filter((s) => s === 'P').length;
   return Math.max(0, total - view.pending.round);
-}
-
-/** Apply `target` for `me` to a cloned view (what-if), mirroring R5.3/R5.4 seat assignment. */
-function withPlacement(view: PlayerView, me: PlayerId, t: PlacementTarget): PlayerView {
-  const v = cloneView(view);
-  switch (t.kind) {
-    case 'punt': {
-      const seat = v.punts.find((p) => p.ware === t.ware)?.seats.find((s) => !s.occupant);
-      if (seat) seat.occupant = me;
-      break;
-    }
-    case 'port':
-    case 'shipyard':
-      v[t.kind][t.slot].occupant = me;
-      break;
-    case 'pirate':
-      if (!v.pirates.captain) v.pirates.captain = me;
-      else v.pirates.crew = me;
-      break;
-    case 'pilot':
-      v.pilots[t.size] = me;
-      break;
-    case 'insurance':
-      v.insurance = me;
-      break;
-  }
-  return v;
 }
 
 function placementCost(view: PlayerView, me: PlayerId, t: PlacementTarget): number {

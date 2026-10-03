@@ -78,4 +78,42 @@ export const ENV = {
   trunk: 0x8a5a32,
   lamp: 0xfff1b0,
   skin: 0xe9b48a,
+  /** Glass / dark window openings. */
+  window: 0x2f5d80,
+  windowDark: 0x1f3a52,
+  /** Capiz-shell sliding windows of Manila's bahay na bato houses (pearly white grid). */
+  capiz: 0xf4ecd6,
+  capizFrame: 0x7a4a2a,
+  /** Volcanic tuff ("adobe") — the yellow-grey building stone of old Manila. */
+  adobe: 0xc8b48c,
+  adobeDark: 0xa8946c,
+  adobeLight: 0xdccba4,
+  /** Cut granite paving and coping on the quay. */
+  paving: 0xb7ad99,
+  pavingDark: 0x9d927d,
+  pavingLight: 0xcfc6b1,
+  mortar: 0x8a8070,
+  /** Town street cobbles. */
+  cobble: 0xc7ad82,
+  cobbleDark: 0xbca277,
+  /** Nipa palm thatch and bamboo of bahay kubo huts. */
+  thatch: 0xc9a25a,
+  thatchDark: 0xa07c3c,
+  bamboo: 0xb9b05a,
+  bambooDark: 0x8a8238,
+  /** Binondo Chinese merchant house. */
+  lacquer: 0xb3262a,
+  lacquerDark: 0x7c1a1d,
+  jadeTile: 0x2f6f5a,
+  lantern: 0xe8402e,
+  /** Spanish colours (fort flag) and fort details. */
+  flagRed: 0xc8252b,
+  flagYellow: 0xf2c230,
+  cannon: 0x2b2d33,
+  tar: 0x24201c,
+  fire: 0xf28a24,
+  smoke: 0xd9d4cc,
+  carabao: 0x4e4a4a,
+  carabaoDark: 0x343131,
+  banana: 0x7cc246,
 } as const;
