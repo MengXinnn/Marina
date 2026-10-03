@@ -40,7 +40,8 @@ export function GameCanvas() {
         far={300}
       />
       <OrbitControls
-        target={CAMERA_TARGET}
+        makeDefault
+        // No target prop: CameraRig owns the target (a re-render would snap it back).
         enableDamping
         minZoom={zoom * 0.6}
         maxZoom={zoom * 3}
