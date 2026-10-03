@@ -2,10 +2,14 @@
 
 桌游 **Manila**（Franz-Benno Delonge，Zoch 2005）的 3D 体素像素风网页版。3–5 人同一设备轮流游玩（hotseat），纯本地运行。
 
+**在线试玩：<https://mengxinnn.github.io/Marina/>**（手机/平板浏览器可"添加到主屏幕"，之后离线也能玩）
+
 ```bash
 npm install
 npm run dev      # http://localhost:5173
 ```
+
+`main` 每次更新都会由 `.github/workflows/pages.yml` 自动构建并发布到 GitHub Pages（首次需要在仓库 Settings → Pages 把 Source 设为 GitHub Actions）。
 
 | 包 | 说明 | 负责 |
 |---|---|---|
@@ -13,6 +17,14 @@ npm run dev      # http://localhost:5173
 | `packages/web` | Vite + React + three.js 体素渲染与 UI | Claude |
 
 文档：[规则规格](docs/RULES.md) · [契约](docs/CONTRACT.md) · [协作手册](docs/COLLABORATION.md) · [Agent 须知](AGENTS.md)
+
+## 内置电脑
+
+开局设置里每个座位可以设为内置电脑，三档难度（代码在 `packages/engine/src/ai/`）：
+
+- **简单**：普通电脑的思路，但约四分之一的决定随手乱下，适合新手练手。
+- **普通**：按到港/劫掠/进船坞的概率算每个选择的期望收益。
+- **困难**：在普通电脑最看好的几个选择上，把本航次剩下的部分模拟几十遍（别人的暗股按看不到的股票随机猜，骰子每遍重掷），选平均结果最好的。在浏览器的后台线程里算，每步约几百毫秒，不会卡画面。
 
 ## 大语言模型电脑玩家
 

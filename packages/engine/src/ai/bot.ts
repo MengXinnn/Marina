@@ -16,9 +16,12 @@ import type {
   Ware,
 } from '../contract/types';
 import { cloneView, myShares, rollsLeft, stakeValue, withPlacement } from './evaluate';
+import { chooseHardAction } from './hard';
 import { outlook } from './probability';
 
-export type BotLevel = 'easy' | 'normal';
+/** easy: a beginner who sometimes guesses; normal: expected-value heuristics; hard: Monte-Carlo
+ * search over the rest of the voyage on top of the normal bot (see hard.ts; slower). */
+export type BotLevel = 'easy' | 'normal' | 'hard';
 
 export interface BotOptions {
   level: BotLevel;
@@ -27,6 +30,9 @@ export interface BotOptions {
 }
 
 type Of<T extends Action['type']> = Extract<Action, { type: T }>;
+
+/** Share of an easy bot's decisions made at random, like a beginner who sometimes guesses. */
+export const EASY_RANDOM_RATE = 0.25;
 
 /**
  * Pick an action for the player whose turn it is.
@@ -43,8 +49,10 @@ export function chooseBotAction(view: PlayerView, legal: Action[], options: BotO
     throw new Error('chooseBotAction: no legal action');
   }
   if (choices.length === 1) return choices[0]!;
+  if (options.level === 'hard') return chooseHardAction(view, legal, { random: options.random });
 
-  if (options.level === 'easy' && options.random() < 0.5) return easyPick(choices, options.random);
+  if (options.level === 'easy' && options.random() < EASY_RANDOM_RATE)
+    return easyPick(choices, options.random);
 
   const me = pending.playerId;
   const noise = () => (options.random() - 0.5) * 0.4;
@@ -71,6 +79,45 @@ export function chooseBotAction(view: PlayerView, legal: Action[], options: BotO
     default:
       return choices[0]!;
   }
+}
+
+/**
+ * The normal bot's opinion of every choice, best first, without noise. The hard bot uses it
+ * to pick which few moves are worth simulating. Bids are ranked lowest first.
+ */
+export function rankChoices(view: PlayerView, legal: Action[]): Action[] {
+  const pending = view.pending;
+  if (!('playerId' in pending)) return [];
+  const me = pending.playerId;
+  const choices = legal.filter((a) => a.type !== 'take-loan' && a.type !== 'repay-loan');
+  const score = (a: Action): number => {
+    switch (a.type) {
+      case 'bid':
+        return -a.amount;
+      case 'pass-bid':
+        return -Infinity;
+      case 'buy-share':
+        return scoreBuy(view, me, a);
+      case 'load-punts':
+        return scoreLoad(view, me, a);
+      case 'place-accomplice':
+        return placementValue(view, me, a.target);
+      case 'pass-placement':
+        return 0.4;
+      case 'pirate-board':
+        return scoreBoard(view, me, a);
+      case 'pilot':
+        return scorePilot(view, me, a);
+      case 'plunder-destination':
+        return scorePlunder(view, me, a);
+      default:
+        return 0;
+    }
+  };
+  return choices
+    .map((a) => [a, score(a)] as const)
+    .sort((x, y) => y[1] - x[1])
+    .map(([a]) => a);
 }
 
 function easyPick(choices: Action[], random: () => number): Action {

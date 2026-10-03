@@ -3,14 +3,19 @@ import { WARES } from '@manila/engine';
 import { zh } from '../i18n/zh';
 import { useGame } from '../game/store';
 import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';
+import { FortuneChart, LedgerTable, ReplayPicker, useGameStats } from './GameStats';
 import { WareChip } from './Hud';
+
+type Tab = 'scores' | 'chart' | 'ledger';
 
 /**
  * Final standings (R9.2/R9.3). Hidden shares no longer matter once the game is over,
  * so this reads the full engine state and reveals every hand.
  */
 export function GameOver() {
-  const over = useGame((s) => s.display.phase === 'game-over' && !!s.display.result && !s.playing);
+  const over = useGame(
+    (s) => s.display.phase === 'game-over' && !!s.display.result && !s.playing && !s.replay,
+  );
   // Mounted only while the game is over, so "look at the board" resets after an undo.
   return over ? <Results /> : null;
 }
@@ -19,6 +24,8 @@ function Results() {
   const state = useGame((s) => s.display);
   const backToSetup = useGame((s) => s.backToSetup);
   const [hidden, setHidden] = useState(false);
+  const [tab, setTab] = useState<Tab>('scores');
+  const stats = useGameStats();
   const result = state.result!;
   if (hidden)
     return (
@@ -40,47 +47,72 @@ function Results() {
             ? zh.gameOver.tie(winners.join('、'))
             : zh.gameOver.winner(winners[0]!)}
         </p>
-        <table className="rules-table gameover-table">
-          <thead>
-            <tr>
-              <th />
-              <th>{zh.gameOver.player}</th>
-              <th>{zh.cash}</th>
-              <th>{zh.gameOver.shareValue}</th>
-              <th>{zh.gameOver.mortgage}</th>
-              <th>{zh.gameOver.total}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ranked.map((line, i) => {
-              const p = byId.get(line.playerId)!;
-              const won = result.winners.includes(line.playerId);
-              return (
-                <tr
-                  key={line.playerId}
-                  className={won ? 'won' : ''}
-                  style={{ '--pc': PLAYER_COLORS[p.color].css } as React.CSSProperties}
-                >
-                  <td>{won ? '★' : i + 1}</td>
-                  <td>
-                    <span className="swatch" /> {p.name}
-                    <div className="gameover-shares">
-                      {p.shares.map((s) => (
-                        <span key={s.id} className={s.mortgaged ? 'mortgaged' : ''}>
-                          <WareChip ware={s.ware} label={String(state.market[s.ware])} />
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td>{line.cash}</td>
-                  <td>{line.shareValue}</td>
-                  <td>{line.mortgagePenalty ? `−${line.mortgagePenalty}` : 0}</td>
-                  <td className="gameover-total">{line.total}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="tabs" role="tablist">
+          {(['scores', 'chart', 'ledger'] as const).map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              className={`btn tiny ${tab === t ? '' : 'ghost'}`}
+              onClick={() => setTab(t)}
+            >
+              {zh.gameOver.tabs[t]}
+            </button>
+          ))}
+        </div>
+        {tab !== 'scores' &&
+          (stats ? (
+            tab === 'chart' ? (
+              <FortuneChart stats={stats} players={state.players} />
+            ) : (
+              <LedgerTable stats={stats} players={state.players} />
+            )
+          ) : (
+            <p className="muted">{zh.stats.unavailable}</p>
+          ))}
+        {tab === 'scores' && (
+          <table className="rules-table gameover-table">
+            <thead>
+              <tr>
+                <th />
+                <th>{zh.gameOver.player}</th>
+                <th>{zh.cash}</th>
+                <th>{zh.gameOver.shareValue}</th>
+                <th>{zh.gameOver.mortgage}</th>
+                <th>{zh.gameOver.total}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ranked.map((line, i) => {
+                const p = byId.get(line.playerId)!;
+                const won = result.winners.includes(line.playerId);
+                return (
+                  <tr
+                    key={line.playerId}
+                    className={won ? 'won' : ''}
+                    style={{ '--pc': PLAYER_COLORS[p.color].css } as React.CSSProperties}
+                  >
+                    <td>{won ? '★' : i + 1}</td>
+                    <td>
+                      <span className="swatch" /> {p.name}
+                      <div className="gameover-shares">
+                        {p.shares.map((s) => (
+                          <span key={s.id} className={s.mortgaged ? 'mortgaged' : ''}>
+                            <WareChip ware={s.ware} label={String(state.market[s.ware])} />
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>{line.cash}</td>
+                    <td>{line.shareValue}</td>
+                    <td>{line.mortgagePenalty ? `−${line.mortgagePenalty}` : 0}</td>
+                    <td className="gameover-total">{line.total}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
         <p className="muted gameover-market">
           {zh.market}：
           {WARES.map((w) => (
@@ -89,6 +121,7 @@ function Results() {
             </span>
           ))}
         </p>
+        {stats && <ReplayPicker stats={stats} />}
         <div className="row gameover-actions">
           <button className="btn big" onClick={backToSetup}>
             {zh.gameOver.again}

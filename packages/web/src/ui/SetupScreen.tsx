@@ -29,7 +29,7 @@ function seatValue(bot: ComputerSeat | null, profiles: LlmProfile[]): string {
 const OPEN_AI_SETTINGS = '__ai-settings';
 
 function seatFromValue(value: string): ComputerSeat | null {
-  if (value === 'easy' || value === 'normal') return value;
+  if (value === 'easy' || value === 'normal' || value === 'hard') return value;
   if (value.startsWith('llm:')) return { llm: value.slice(4) };
   return null;
 }
@@ -120,6 +120,9 @@ export function SetupScreen() {
                   </option>
                   <option value="easy">
                     {zh.bot}·{zh.botLevel.easy}
+                  </option>
+                  <option value="hard">
+                    {zh.bot}·{zh.botLevel.hard}
                   </option>
                 </optgroup>
                 <optgroup label="大语言模型">

@@ -859,3 +859,70 @@ body {
 .pilot-delta.on {
   color: var(--gold);
 }
+
+/* ── game statistics (game over) ── */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.fortune-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.fortune-chart .grid {
+  stroke: #2b5266;
+  stroke-width: 1;
+}
+.fortune-chart .crosshair {
+  stroke: var(--ink-dim);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.fortune-chart .tick {
+  fill: var(--ink-dim);
+  font-size: 11px;
+  font-family: var(--font-pixel);
+}
+.fortune-chart .end-label {
+  fill: var(--ink);
+  font-size: 12px;
+  font-family: var(--font-pixel);
+}
+.fortune-tip {
+  min-height: 1.4em;
+  margin: 4px 0 0;
+}
+.ledger-table {
+  text-align: right;
+}
+.ledger-table th {
+  font-weight: normal;
+  color: var(--gold);
+  cursor: help;
+}
+.ledger-table td:first-child,
+.ledger-table th:first-child {
+  text-align: left;
+  white-space: nowrap;
+}
+.ledger-table .swatch {
+  display: inline-block;
+  vertical-align: middle;
+}
+.ledger-table .plus {
+  color: var(--ok);
+}
+.ledger-table .minus {
+  color: var(--warn);
+}
+.replay-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 12px;
+}

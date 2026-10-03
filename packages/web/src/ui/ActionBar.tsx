@@ -15,6 +15,26 @@ export function ActionBar() {
   const curtain = useCurtain();
   const pending = view.pending;
   const botActing = useBotActing('playerId' in pending ? pending.playerId : null);
+  const replay = useGame((s) => s.replay);
+  const stopReplay = useGame((s) => s.stopReplay);
+  if (replay)
+    return (
+      <footer className="actionbar panel">
+        <div className="action-body">
+          <p className="muted">
+            {zh.stats.replaying(view.voyage)}（{replay.index}/{replay.actions.length}）
+          </p>
+        </div>
+        {playing && (
+          <button className="btn ghost" onClick={skip}>
+            跳过动画
+          </button>
+        )}
+        <button className="btn ghost" onClick={stopReplay}>
+          {zh.stats.stopReplay}
+        </button>
+      </footer>
+    );
   if (playing)
     return (
       <footer className="actionbar panel">

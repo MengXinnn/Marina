@@ -20,7 +20,7 @@ export function sanitizeSeats(raw: unknown): BotSeats {
   if (!raw || typeof raw !== 'object') return {};
   const seats: BotSeats = {};
   for (const [id, seat] of Object.entries(raw as Record<string, unknown>)) {
-    if (seat === 'easy' || seat === 'normal') seats[id] = seat;
+    if (seat === 'easy' || seat === 'normal' || seat === 'hard') seats[id] = seat;
     else if (isLlmSeat(seat as ComputerSeat)) seats[id] = { llm: (seat as LlmSeat).llm };
   }
   return seats;
