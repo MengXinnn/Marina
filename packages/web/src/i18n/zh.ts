@@ -26,7 +26,7 @@ export const zh = {
   accomplices: '同伙',
   mortgaged: '已抵押',
   bot: '电脑',
-  botLevel: { easy: '简单', normal: '普通' } as const,
+  botLevel: { easy: '简单', normal: '普通', hard: '困难' } as const,
   botThinking: (name: string) => `电脑 ${name} 正在思考……`,
   banner: {
     voyageSub: '竞拍港务长',

@@ -81,3 +81,17 @@ describe('store: hotseat privacy', () => {
     expect(soleHuman(game().state, game().bots)).toBeNull();
   });
 });
+
+describe('store: hard computer seats', () => {
+  it('R1.6 hard seats play legal moves on their own (inline when no Worker exists)', async () => {
+    vi.useFakeTimers();
+    game().startGame(config, { p1: 'hard', p2: 'hard', p3: 'hard' });
+    for (let i = 0; i < 400 && game().state.turn < 6; i++) {
+      game().skipAnimation();
+      await vi.advanceTimersByTimeAsync(500);
+    }
+    expect(game().state.turn).toBeGreaterThanOrEqual(6);
+    expect(game().botStalled).toBeNull();
+    vi.useRealTimers();
+  });
+});

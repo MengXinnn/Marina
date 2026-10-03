@@ -8,6 +8,7 @@ import {
   getLegalActions,
   getPlayerView,
   type Action,
+  type BotLevel,
   type EngineError,
   type GameConfig,
   type GameEvent,
@@ -23,6 +24,7 @@ import { decideWithLlm, type LlmDecision } from '../llm/player';
 import { LlmError } from '../llm/providers';
 import { findProfile, useLlmSettings } from '../llm/settings';
 import { emitFxStep } from './fx';
+import { chooseHardMove } from './hardBot';
 import { createMockState, mockDemoScript, mockView } from './mock';
 import { patchDisplay } from './present';
 import { clearSave, loadSave, writeSave } from './save';
@@ -363,8 +365,26 @@ export const useGame = create<GameStore>((set, get) => {
     botTimer = setTimeout(() => {
       const s = get();
       if (s.state.turn !== turn || s.playing || s.screen !== 'game') return;
-      builtInMove(actor, turn, level);
+      if (level === 'hard') void hardMove(actor, turn);
+      else builtInMove(actor, turn, level);
     }, BOT_THINK_MS / settings.speed);
+  }
+
+  /** The hard bot searches in a worker; act only if the table has not moved on meanwhile. */
+  async function hardMove(actor: PlayerId, turn: number): Promise<void> {
+    const before = get().state;
+    let action: Action;
+    try {
+      action = await chooseHardMove(getPlayerView(before, actor), getLegalActions(before, actor));
+    } catch (e) {
+      console.error(e);
+      builtInMove(actor, turn, 'normal');
+      return;
+    }
+    const s = get();
+    if (s.state !== before || s.playing || s.screen !== 'game' || s.replay) return;
+    s.dispatch(action);
+    if (get().state.turn === turn) set({ botStalled: actor, notice: 'bot-stalled' });
   }
 
   /** Play the next recorded action of a replay, or return to the final standings. */
@@ -382,7 +402,7 @@ export const useGame = create<GameStore>((set, get) => {
   }
 
   /** The heuristic bot plays `actor`'s pending decision right now. */
-  function builtInMove(actor: PlayerId, turn: number, level: 'easy' | 'normal'): void {
+  function builtInMove(actor: PlayerId, turn: number, level: BotLevel): void {
     const s = get();
     try {
       const action = chooseBotAction(
