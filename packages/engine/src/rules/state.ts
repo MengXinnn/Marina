@@ -54,7 +54,7 @@ export function scores(state: GameState): ScoreLine[] {
   });
 }
 
-/** R3.3/R8.2 TODO(ruling): preserve collateral backing a live winning bid.
+/** R8.2【裁定】preserve collateral backing a live winning bid.
  * Redeeming reduces purchasing power by three; allow it only if that bid remains
  * payable. Other players and all non-auction phases can redeem normally. */
 export function canRepay(state: GameState, p: PlayerState): boolean {

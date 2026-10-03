@@ -97,7 +97,7 @@ describe('rule boundary regressions', () => {
     );
   });
 
-  it('R3.3/R8.2 repayment cannot make an outstanding winning bid insolvent', () => {
+  it('R8.2 repayment cannot make an outstanding winning bid insolvent', () => {
     let state = createGame(config());
     state = step(state, { type: 'bid', playerId: 'p1', amount: 54 }).state;
     const shareId = state.players[0].shares[0].id;
@@ -110,6 +110,24 @@ describe('rule boundary regressions', () => {
     state = step(state, { type: 'pass-bid', playerId: 'p2' }).state;
     state = step(state, { type: 'pass-bid', playerId: 'p3' }).state;
     expect(state.players[0].cash).toBe(0);
+  });
+
+  it('R5.9/R6.3 stranded punts take the shipyard before a plundered punt is sent there', () => {
+    const state = finalRoll();
+    state.punts[1].position = 12; // nutmeg sits between the two stranded punts on the route
+    state.pirates.captain = 'p2';
+    const rolled = step(state, { type: 'roll-dice', playerId: 'p1' });
+    expect(rolled.state.pending).toMatchObject({ type: 'plunder-destination', ware: 'nutmeg' });
+    const sent = step(rolled.state, {
+      type: 'plunder-destination',
+      playerId: 'p2',
+      destination: 'shipyard',
+    });
+    expect([...rolled.events, ...sent.events].filter((e) => e.type === 'punt-docked')).toEqual([
+      { type: 'punt-docked', ware: 'ginseng', dock: 'shipyard', slot: 'A' },
+      { type: 'punt-docked', ware: 'silk', dock: 'shipyard', slot: 'B' },
+      { type: 'punt-docked', ware: 'nutmeg', dock: 'shipyard', slot: 'C' },
+    ]);
   });
 
   it('R8.5 self-insurance costs net zero, emits one transfer, and never takes a loan', () => {
