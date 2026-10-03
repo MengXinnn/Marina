@@ -7,4 +7,4 @@
 - `packages/web/**`：体素像素风 3D 场景、动画、HUD/交互、hotseat 流程、音效、部署。
 
 前端仍只通过 `@manila/engine` 的公开 API 和契约类型调用引擎，绝不在前端重写规则。
-每个 PR 合并前：`npm run check` 通过、CI 绿、Codex Review 无未解决意见（推送修复后评论 `@codex review` 请求复审）。
+每个 PR 合并前：`npm run check` 通过、CI 绿、Jules review 无未解决意见（每次推送都会自动复审）。

@@ -4,7 +4,7 @@
 
 ## 2026-10-03 — Claude 接手引擎（负责人决定）
 
-- 负责人决定 Codex 不再开发，由 Claude 接手全部开发；Codex 只做自动 PR review。AGENTS.md / CLAUDE.md / COLLABORATION.md 已更新。
+- 负责人决定 Codex 不再开发，由 Claude 接手全部开发；Codex 随后停用，PR 改由 Jules 自动 review（负责人加的 `pr-review.yml`）。AGENTS.md / CLAUDE.md / COLLABORATION.md 已更新。
 - 接手时的状态：Codex 的完整引擎 PR #5（R1–R10、合法动作、事件、回放、4 个 fixtures、随机对局测试，Codex Review 无问题、CI 绿）一直未合并。Claude 逐个文件对照 RULES.md 审查（流程、合法动作、校验、结算与保险破产、劫掠与领航员、新航次重置），未发现规则错误；本地把 main + #5 + #7 合并后全量检查通过，并让电脑玩家用真实引擎打完整局（浏览器 ×4 速度全程无报错；200 局统计：普通赢 175、简单赢 28、平均 4.9 航次）。之后合并了 #5。
 - 前端补充：游戏结束结算画面（排名、现金/股票/抵押明细、翻开所有股票、再来一局）；同时到账的多笔飘字移到玩家栏外侧横向排开、不再挡住现金；动画中海盗挤人/劫掠后同伙数量回到主人手里（Codex 交接请求）。
 - 两条规则裁定已由负责人确认（按原暂定实现），写入 RULES.md 并去掉代码里的 `TODO(ruling)`：

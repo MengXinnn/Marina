@@ -1,6 +1,6 @@
 # 双 agent 协作手册
 
-> **2026-10-03 更新**：负责人决定由 Claude 接手全部开发（引擎 + 前端 + 电脑玩家），Codex 只做自动 PR review。
+> **2026-10-03 更新**：负责人决定由 Claude 接手全部开发（引擎 + 前端 + 电脑玩家）；Codex 已停用，PR 改由 Jules 自动 review。
 > 下面的双 agent 流程保留作参考：契约先行、交接日志、小 PR 的做法仍然沿用。
 
 ## 角色
@@ -9,8 +9,8 @@
 |---|---|---|
 | 负责人 | 人类（仓库 owner） | 分派任务、合并 PR、对【裁定】和契约争议拍板、在两个 agent 之间转达消息 |
 | 开发 | Claude | `packages/engine`（规则引擎、测试、fixtures、电脑玩家）+ `packages/web`（3D 场景、动画、UI、hotseat、部署） |
-| 审查 | Codex Review（自动） | 每个 PR 的代码 review；修复后 `@codex review` 复审 |
-| 历史 | Codex（ChatGPT） | M1 引擎作者（PR #1、#4、#5），2026-10-03 起不再开发 |
+| 审查 | Jules（自动，`.github/workflows/pr-review.yml`） | 每个 PR 打开和每次推送时自动 review |
+| 历史 | Codex（ChatGPT） | M1 引擎作者（PR #1、#4、#5），之后做过 PR review；2026-10-03 停用 |
 
 两个 agent 不直接对话，**仓库就是沟通渠道**：契约代码、交接日志（`docs/handoff/*.md`）、PR 描述、GitHub Issues。
 

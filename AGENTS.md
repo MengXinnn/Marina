@@ -1,7 +1,7 @@
 # AGENTS.md — 马尼拉 Manila（体素像素风 3D 网页桌游）
 
-> **2026-10-03 起：所有开发由 Claude 负责（引擎 + 前端 + 电脑玩家）**，Codex 不再开发，只做自动 PR review（Codex Review）。
-> 人类负责人（仓库 owner）负责分派任务、拍板规则裁定；PR 在 CI 通过且 Codex Review 无未解决意见后合并。
+> **2026-10-03 起：所有开发由 Claude 负责（引擎 + 前端 + 电脑玩家）**，Codex 已停用；PR 由 Jules 自动 review（`.github/workflows/pr-review.yml`）。
+> 人类负责人（仓库 owner）负责分派任务、拍板规则裁定；PR 在 CI 通过且 Jules review 无未解决意见后合并。
 > 所有 agent 开工前必须读完：本文件 → `docs/COLLABORATION.md` → `docs/RULES.md` → `packages/engine/src/contract/types.ts`。
 
 ## 项目一句话
@@ -19,7 +19,7 @@
 | `docs/RULES.md` | Claude 维护 | 规则规格；【裁定】条目改动需人类拍板 |
 | `docs/handoff/claude.md` | Claude | 交接日志；`docs/handoff/codex.md` 保留为历史记录，不再追加 |
 | 根目录配置、CI、其余 docs | Claude | |
-| PR review | **Codex Review**（自动） | 每个 PR 打开时自动 review；推送修复后用 `@codex review` 请求复审 |
+| PR review | **Jules**（自动，GitHub Actions） | PR 打开和每次推送都会自动 review；修复意见后直接推送即可触发复审 |
 
 **以后若再引入第二个开发 agent**：恢复按目录划分所有权，不要修改对方目录下的文件；需要对方改东西 → 写进交接日志或开 GitHub Issue。
 
