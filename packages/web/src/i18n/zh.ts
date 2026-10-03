@@ -54,6 +54,7 @@ export const zh = {
     roll: '掷骰子',
     stay: '留在海盗船',
     board: (w: string) => `登上${w}船`,
+    boardDisplace: (w: string, name: string) => `登上${w}船（挤下${name}）`,
     toPort: '送去港口',
     toShipyard: '送去船坞',
     skipPilot: '不行动',
@@ -130,7 +131,7 @@ export function describeEvent(e: GameEvent, name: (id: string) => string): strin
     case 'punt-docked':
       return `${w(e.ware)}船 停入${slotName(e.dock, e.slot)}`;
     case 'pirate-boarded':
-      return `海盗 ${name(e.playerId)} 登上${w(e.ware)}船！`;
+      return `海盗 ${name(e.playerId)} 登上${w(e.ware)}船！${e.displaced ? `（${name(e.displaced)} 被挤下船）` : ''}`;
     case 'pirate-stayed':
       return `海盗 ${name(e.playerId)} 留在海盗船上`;
     case 'pirate-promoted':
