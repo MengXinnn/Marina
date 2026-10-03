@@ -58,7 +58,7 @@ describe('ai/playout against the real engine', () => {
         expect(end.result?.winners.length).toBeGreaterThan(0);
         for (const p of end.players) expect(p.cash).toBeGreaterThanOrEqual(0);
       }
-  });
+  }, 30_000); // 60 full games: allow slower CI runners
 
   it('R9.3 normal bots outscore easy bots over many seeded games', () => {
     let normalWins = 0;
@@ -74,5 +74,5 @@ describe('ai/playout against the real engine', () => {
       }
     }
     expect(normalWins).toBeGreaterThan(easyWins);
-  });
+  }, 30_000);
 });

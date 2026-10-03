@@ -655,8 +655,13 @@ describe('engine API invariants', () => {
   it('actions from a player other than pending.playerId return not-your-turn (loans excepted)', () => {
     rejected(loaded(), { type: 'pass-placement', playerId: 'p2' }, 'not-your-turn');
   });
-  it('getLegalActions only returns actions that applyAction accepts (fuzz: random playouts)', () =>
-    runPlayouts([1, 7, 19], true));
+  it(
+    'getLegalActions only returns actions that applyAction accepts (fuzz: random playouts)',
+    () =>
+      // Exhaustive: applies every legal action at every step. Heavy on slower CI runners.
+      runPlayouts([1, 7, 19], true),
+    30_000,
+  );
   it("getPlayerView hides other players' share wares", () => {
     const state = createGame(config());
     const view = getPlayerView(state, 'p2');
