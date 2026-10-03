@@ -10,12 +10,16 @@ import { WareChip } from './Hud';
  * so this reads the full engine state and reveals every hand.
  */
 export function GameOver() {
+  const over = useGame((s) => s.display.phase === 'game-over' && !!s.display.result && !s.playing);
+  // Mounted only while the game is over, so "look at the board" resets after an undo.
+  return over ? <Results /> : null;
+}
+
+function Results() {
   const state = useGame((s) => s.display);
-  const playing = useGame((s) => s.playing);
   const backToSetup = useGame((s) => s.backToSetup);
   const [hidden, setHidden] = useState(false);
-  const result = state.result;
-  if (state.phase !== 'game-over' || !result || playing) return null;
+  const result = state.result!;
   if (hidden)
     return (
       <button className="btn big gameover-reopen" onClick={() => setHidden(false)}>

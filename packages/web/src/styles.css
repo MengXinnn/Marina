@@ -637,7 +637,7 @@ canvas {
   border-bottom: var(--px) solid var(--edge);
 }
 .gameover-table tr.won td {
-  background: rgba(242, 194, 48, 0.12);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
 }
 .gameover-table .swatch {
   display: inline-block;
