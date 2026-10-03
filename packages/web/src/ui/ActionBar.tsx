@@ -14,6 +14,7 @@ import { zh } from '../i18n/zh';
 import { boardingOptions } from '../game/choices';
 import { legalActionsFor, useBotActing, useCurtain, useGame, useView } from '../game/store';
 import { PLAYER_COLORS } from '../scene/palette';
+import { BotThinking } from './BotThinking';
 import { WareChip } from './Hud';
 
 /** Bottom panel: one UI per `pending.type`. It only collects input — the engine validates. */
@@ -52,7 +53,7 @@ export function ActionBar() {
           {actor.name}
         </div>
         <div className="action-body">
-          <p className="muted">{zh.botThinking(actor.name)}</p>
+          <BotThinking playerId={actor.id} name={actor.name} />
         </div>
       </footer>
     );

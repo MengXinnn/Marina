@@ -8,7 +8,6 @@ import {
   getLegalActions,
   getPlayerView,
   type Action,
-  type BotLevel,
   type EngineError,
   type GameConfig,
   type GameEvent,
@@ -20,9 +19,15 @@ import {
 } from '@manila/engine';
 import { playStep } from '../audio/sfx';
 import { describeEvent } from '../i18n/zh';
+import { decideWithLlm, type LlmDecision } from '../llm/player';
+import { LlmError } from '../llm/providers';
+import { findProfile, useLlmSettings } from '../llm/settings';
 import { createMockState, mockDemoScript, mockView } from './mock';
 import { patchDisplay } from './present';
 import { clearSave, loadSave, writeSave } from './save';
+import { isLlmSeat, type BotSeats } from './seats';
+
+export type { BotSeats, ComputerSeat, LlmSeat } from './seats';
 
 export type EngineMode = 'live' | 'mock';
 export type Screen = 'setup' | 'game';
@@ -36,11 +41,38 @@ export const DEFAULT_CONFIG: GameConfig = {
   ],
 };
 
-/** Seats played by the computer, keyed by player id. */
-export type BotSeats = Partial<Record<PlayerId, BotLevel>>;
-
 /** How long a computer player "thinks" before acting (ms at speed ×1). */
 const BOT_THINK_MS = 750;
+
+/** Consecutive failures after which a language-model seat is handed to the built-in computer. */
+export const LLM_MAX_FAILURES = 3;
+
+/** Public log lines (oldest first) handed to language-model seats as recent history. */
+const LLM_HISTORY_LINES = 16;
+
+/** How one language-model seat has been doing this game. */
+export interface LlmSeatStats {
+  /** Moves the model chose. */
+  decisions: number;
+  /** Moves the built-in computer played instead (failure, timeout, or nobody wanted to wait). */
+  fallbacks: number;
+  /** Consecutive failures; at LLM_MAX_FAILURES the seat stops asking the model. */
+  streak: number;
+  calls: number;
+  ms: number;
+  inputTokens: number;
+  outputTokens: number;
+  lastError: string | null;
+}
+
+/** The language-model seat whose reply the table is waiting for. */
+export interface LlmThinking {
+  playerId: PlayerId;
+  /** Date.now() when the request went out (it may start while the previous move animates). */
+  startedAt: number;
+  /** Profile name and model, for the waiting banner. */
+  label: string;
+}
 
 export interface Settings {
   /** Hotseat privacy: hide share wares until the acting player confirms they hold the device. */
@@ -83,6 +115,11 @@ interface GameStore {
   bots: BotSeats;
   /** A computer seat that could not act this turn; humans may act for it until the turn advances. */
   botStalled: PlayerId | null;
+  /** Set while a language-model seat is waiting for its reply. */
+  llmThinking: LlmThinking | null;
+  llmStats: Partial<Record<PlayerId, LlmSeatStats>>;
+  /** Public history (log lines plus AI table talk) for language-model prompts. */
+  table: string[];
   lastError: EngineError | null;
   notice: string | null;
 
@@ -95,6 +132,10 @@ interface GameStore {
   skipAnimation(): void;
   setSettings(patch: Partial<Settings>): void;
   notify(message: string | null): void;
+  /** Stop waiting for the language model; the built-in computer plays this move. */
+  llmTakeOver(): void;
+  /** After the AI settings change: give suspended language-model seats another chance. */
+  retryLlmSeats(): void;
   /** Mock mode only: preview another decision panel. */
   setMockPending(pending: PendingDecision): void;
   /** Mock mode only: play a scripted voyage to exercise the animation layer. */
@@ -281,26 +322,196 @@ export const useGame = create<GameStore>((set, get) => {
     const { mode, screen, playing, state, bots, settings } = get();
     const actor = actorOf(state);
     if (mode !== 'live' || screen !== 'game' || playing || !actor) return;
-    const level = bots[actor];
-    if (!level) return;
+    const seat = bots[actor];
+    if (!seat) return;
     const turn = state.turn;
+    if (isLlmSeat(seat) && !llmSuspended(actor)) {
+      void runLlmTurn(actor, turn);
+      return;
+    }
+    // A suspended language-model seat is played by the built-in computer at normal level.
+    const level = isLlmSeat(seat) ? 'normal' : seat;
     botTimer = setTimeout(() => {
       const s = get();
       if (s.state.turn !== turn || s.playing || s.screen !== 'game') return;
-      try {
-        const action = chooseBotAction(
-          getPlayerView(s.state, actor),
-          getLegalActions(s.state, actor),
-          { level, random: Math.random },
-        );
-        s.dispatch(action);
-      } catch (e) {
-        if (!(e instanceof NotImplementedError)) console.error(e);
-      }
-      // The engine refused or the bot failed: hand this decision to the humans instead of
-      // leaving the seat "thinking" forever. Automation resumes once the turn advances.
-      if (get().state.turn === turn) set({ botStalled: actor, notice: 'bot-stalled' });
+      builtInMove(actor, turn, level);
     }, BOT_THINK_MS / settings.speed);
+  }
+
+  /** The heuristic bot plays `actor`'s pending decision right now. */
+  function builtInMove(actor: PlayerId, turn: number, level: 'easy' | 'normal'): void {
+    const s = get();
+    try {
+      const action = chooseBotAction(
+        getPlayerView(s.state, actor),
+        getLegalActions(s.state, actor),
+        { level, random: Math.random },
+      );
+      s.dispatch(action);
+    } catch (e) {
+      if (!(e instanceof NotImplementedError)) console.error(e);
+    }
+    // The engine refused or the bot failed: hand this decision to the humans instead of
+    // leaving the seat "thinking" forever. Automation resumes once the turn advances.
+    if (get().state.turn === turn) set({ botStalled: actor, notice: 'bot-stalled' });
+  }
+
+  // ───────────── language-model seats ─────────────
+
+  type LlmOutcome =
+    { ok: true; decision: LlmDecision } | { ok: false; error: string; takenOver: boolean };
+
+  interface LlmJob {
+    turn: number;
+    actor: PlayerId;
+    startedAt: number;
+    label: string;
+    ctrl: AbortController;
+    /** The humans stopped waiting: the built-in computer plays this move. */
+    takenOver: boolean;
+    /** Replaced by a new game, an undo or a newer decision: drop the outcome. */
+    cancelled: boolean;
+    promise: Promise<LlmOutcome>;
+  }
+
+  /** The one request in flight. It starts as soon as the engine names an AI seat, so the
+   *  model thinks while the previous move is still animating. */
+  let llmJob: LlmJob | null = null;
+
+  function llmSuspended(actor: PlayerId): boolean {
+    return (get().llmStats[actor]?.streak ?? 0) >= LLM_MAX_FAILURES;
+  }
+
+  function cancelLlm(): void {
+    if (llmJob) {
+      llmJob.cancelled = true;
+      llmJob.ctrl.abort();
+    }
+    llmJob = null;
+    if (get().llmThinking) set({ llmThinking: null });
+  }
+
+  /** Start (or reuse) the request for the current decision if an AI seat must make it. */
+  function startLlmJob(): LlmJob | null {
+    const { mode, screen, state, bots } = get();
+    const actor = actorOf(state);
+    if (mode !== 'live' || screen !== 'game' || !actor) return null;
+    const seat = bots[actor];
+    if (!isLlmSeat(seat) || llmSuspended(actor)) return null;
+    if (llmJob && llmJob.turn === state.turn && llmJob.actor === actor) return llmJob;
+    cancelLlm();
+    const profile = findProfile(seat.llm);
+    if (!profile) return null;
+    const job: LlmJob = {
+      turn: state.turn,
+      actor,
+      startedAt: Date.now(),
+      label: `${profile.name} · ${profile.model}`,
+      ctrl: new AbortController(),
+      takenOver: false,
+      cancelled: false,
+      promise: Promise.resolve(null as never),
+    };
+    job.promise = decideWithLlm({
+      profile,
+      view: getPlayerView(state, actor),
+      legal: getLegalActions(state, actor),
+      recent: get().table.slice(-LLM_HISTORY_LINES),
+      signal: job.ctrl.signal,
+    }).then(
+      (decision): LlmOutcome => ({ ok: true, decision }),
+      (e: unknown): LlmOutcome => ({
+        ok: false,
+        error: e instanceof Error ? e.message : String(e),
+        takenOver: job.takenOver || (e instanceof LlmError && e.kind === 'aborted'),
+      }),
+    );
+    llmJob = job;
+    return job;
+  }
+
+  function bumpStats(actor: PlayerId, patch: (s: LlmSeatStats) => Partial<LlmSeatStats>): void {
+    set((st) => {
+      const prev: LlmSeatStats = st.llmStats[actor] ?? {
+        decisions: 0,
+        fallbacks: 0,
+        streak: 0,
+        calls: 0,
+        ms: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        lastError: null,
+      };
+      return { llmStats: { ...st.llmStats, [actor]: { ...prev, ...patch(prev) } } };
+    });
+  }
+
+  /** Add a line to the visible log; `tell` also adds it to the history the models read. */
+  function say(text: string, tell: boolean): void {
+    set((st) => ({
+      log: [...st.log, { id: nextId++, text }].slice(-80),
+      table: tell ? [...st.table, text].slice(-40) : st.table,
+    }));
+  }
+
+  async function runLlmTurn(actor: PlayerId, turn: number): Promise<void> {
+    const job = startLlmJob();
+    if (!job) {
+      llmFallback(actor, turn, '找不到这个座位的 AI 配置（可能已被删除）', true);
+      return;
+    }
+    set({ llmThinking: { playerId: actor, startedAt: job.startedAt, label: job.label } });
+    const outcome = await job.promise;
+    if (job.cancelled) return;
+    llmJob = null;
+    set({ llmThinking: null });
+    const s = get();
+    // Something else moved the game on while we waited.
+    if (s.state.turn !== turn || s.screen !== 'game' || s.mode !== 'live' || s.playing) return;
+    if (!outcome.ok) {
+      llmFallback(
+        actor,
+        turn,
+        outcome.takenOver ? '没有等它回复' : outcome.error,
+        !outcome.takenOver,
+      );
+      return;
+    }
+    const d = outcome.decision;
+    bumpStats(actor, (st) => ({
+      decisions: st.decisions + 1,
+      streak: 0,
+      calls: st.calls + d.calls,
+      ms: st.ms + d.ms,
+      inputTokens: st.inputTokens + (d.usage.input ?? 0),
+      outputTokens: st.outputTokens + (d.usage.output ?? 0),
+      lastError: null,
+    }));
+    if (d.reason && useLlmSettings.getState().settings.showReasons)
+      say(`${nameOf(actor)}：「${d.reason}」`, true);
+    s.dispatch(d.action);
+    if (get().state.turn === turn) llmFallback(actor, turn, '规则引擎拒绝了 AI 的选择', true);
+  }
+
+  /** The model could not decide: the built-in computer plays the move instead. */
+  function llmFallback(actor: PlayerId, turn: number, why: string, failed: boolean): void {
+    if (get().state.turn !== turn) return;
+    const name = nameOf(actor);
+    bumpStats(actor, (st) => ({
+      fallbacks: st.fallbacks + 1,
+      streak: failed ? st.streak + 1 : st.streak,
+      lastError: failed ? why : st.lastError,
+    }));
+    say(`${name}（AI）这一步由内置电脑代走：${why}`, false);
+    const suspended = failed && llmSuspended(actor);
+    set({
+      notice: suspended
+        ? `${name} 的 AI 连续 ${LLM_MAX_FAILURES} 次失败，改由内置电脑接管；保存 AI 设置后重新启用`
+        : failed
+          ? `${name} 的 AI 没能给出决定，已由内置电脑代走（原因见航海日志）`
+          : null,
+    });
+    builtInMove(actor, turn, 'normal');
   }
 
   return {
@@ -318,11 +529,15 @@ export const useGame = create<GameStore>((set, get) => {
     revealedFor: null,
     bots: {},
     botStalled: null,
+    llmThinking: null,
+    llmStats: {},
+    table: [],
     lastError: null,
     notice: null,
 
     startGame(config, bots = {}) {
       runToken++;
+      cancelLlm();
       const { mode } = get();
       // The engine is pure (no hidden entropy), so a fresh game needs a seed from us.
       const seed = config.seed ?? Math.floor(Math.random() * 2 ** 31);
@@ -340,6 +555,8 @@ export const useGame = create<GameStore>((set, get) => {
         // Bots only act through the real engine; in mock mode they would just "think" forever.
         bots: mode === 'live' ? bots : {},
         botStalled: null,
+        llmStats: {},
+        table: [],
         notice: mode === 'mock' ? 'mock' : null,
       });
       if (mode === 'live') writeSave(state, bots);
@@ -350,6 +567,7 @@ export const useGame = create<GameStore>((set, get) => {
       const saved = get().mode === 'live' ? loadSave() : null;
       if (!saved) return false;
       runToken++;
+      cancelLlm();
       set({
         screen: 'game',
         state: saved.state,
@@ -360,6 +578,8 @@ export const useGame = create<GameStore>((set, get) => {
         revealedFor: null,
         bots: saved.bots,
         botStalled: null,
+        llmStats: {},
+        table: [],
       });
       scheduleBot();
       return true;
@@ -368,6 +588,7 @@ export const useGame = create<GameStore>((set, get) => {
     backToSetup() {
       runToken++;
       if (botTimer) clearTimeout(botTimer);
+      cancelLlm();
       set({ screen: 'setup', playing: false, dice: null });
     },
 
@@ -393,9 +614,19 @@ export const useGame = create<GameStore>((set, get) => {
         set({ lastError: result.error, notice: result.error.code });
         return;
       }
-      set({ state: result.state, history: [...history, state], lastError: null, botStalled: null });
+      const name = (id: string) => result.state.players.find((p) => p.id === id)?.name ?? id;
+      const told = result.events.flatMap((e) => describeEvent(e, name) ?? []);
+      set((s) => ({
+        state: result.state,
+        history: [...history, state],
+        lastError: null,
+        botStalled: null,
+        table: [...s.table, ...told].slice(-40),
+      }));
       if (result.state.phase === 'game-over') clearSave();
       else writeSave(result.state, get().bots);
+      // Let an AI seat that acts next start thinking while this move animates.
+      startLlmJob();
       void animate(result.events, result.state);
     },
 
@@ -409,12 +640,15 @@ export const useGame = create<GameStore>((set, get) => {
       if (bots[actorOf(prev) ?? ''] !== undefined) return;
       runToken++;
       if (botTimer) clearTimeout(botTimer);
+      cancelLlm();
       set({
         state: prev,
         display: prev,
         history: history.slice(0, i),
         dice: null,
         botStalled: null,
+        // The models' history would describe moves that no longer happened.
+        table: [],
       });
       writeSave(prev, bots);
     },
@@ -434,6 +668,24 @@ export const useGame = create<GameStore>((set, get) => {
 
     notify(message) {
       set({ notice: message });
+    },
+
+    llmTakeOver() {
+      if (!llmJob) return;
+      llmJob.takenOver = true;
+      llmJob.ctrl.abort();
+    },
+
+    retryLlmSeats() {
+      set((s) => ({
+        llmStats: Object.fromEntries(
+          Object.entries(s.llmStats).map(([id, st]) => [id, st && { ...st, streak: 0 }]),
+        ),
+      }));
+      // A seat that was waiting on a stale profile picks up the new settings.
+      const { state, bots, playing, llmThinking } = get();
+      const actor = actorOf(state);
+      if (actor && isLlmSeat(bots[actor]) && !playing && !llmThinking) scheduleBot();
     },
 
     setMockPending(pending) {

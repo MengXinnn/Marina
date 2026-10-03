@@ -483,9 +483,6 @@ body {
 .input:focus {
   outline: var(--px) solid var(--gold);
 }
-.seat-toggle {
-  min-width: 7.5em;
-}
 .colors {
   display: inline-flex;
   gap: 4px;

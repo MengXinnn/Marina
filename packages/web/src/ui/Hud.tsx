@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { isMuted, setMuted } from '../audio/sfx';
 import { MARKET_TRACK, WARES, type PlayerViewEntry, type Ware } from '@manila/engine';
 import { zh } from '../i18n/zh';
-import { useGame, useView } from '../game/store';
+import { useGame, useView, type ComputerSeat, type LlmSeatStats } from '../game/store';
+import { isLlmSeat } from '../game/seats';
+import { useLlmSettings } from '../llm/settings';
 import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';
 import { ActionBar } from './ActionBar';
+import { AiSettings } from './AiSettings';
 import { Curtain } from './Curtain';
 import { GameOver } from './GameOver';
 import { DevBar } from './DevBar';
@@ -52,6 +55,7 @@ function TopBar() {
 
 function GameControls() {
   const [rules, setRules] = useState(false);
+  const [ai, setAi] = useState(false);
   const [mute, setMute] = useState(isMuted);
   const settings = useGame((s) => s.settings);
   const setSettings = useGame((s) => s.setSettings);
@@ -73,6 +77,14 @@ function GameControls() {
         {mute ? '静音' : '音效'}
       </button>
       {rules && <RulesSheet onClose={() => setRules(false)} />}
+      <button
+        className="btn tiny ghost"
+        title="AI 玩家设置（大语言模型）"
+        onClick={() => setAi(true)}
+      >
+        AI
+      </button>
+      {ai && <AiSettings onClose={() => setAi(false)} />}
       <button
         className="btn tiny ghost"
         title="动画速度"
@@ -111,16 +123,41 @@ export function WareChip({ ware, label }: { ware: Ware | null; label?: string })
   );
 }
 
+/** Hover text for a language-model seat: which profile, and how it has been doing. */
+function llmTitle(label: string, stats: LlmSeatStats | undefined): string {
+  if (!stats) return label;
+  const parts = [`${label}`, `AI 决策 ${stats.decisions} 次`];
+  if (stats.fallbacks) parts.push(`内置电脑代走 ${stats.fallbacks} 次`);
+  if (stats.inputTokens || stats.outputTokens)
+    parts.push(`tokens 输入 ${stats.inputTokens} / 输出 ${stats.outputTokens}`);
+  if (stats.lastError) parts.push(`最近错误：${stats.lastError}`);
+  return parts.join('\n');
+}
+
+function BotTag({ playerId, seat }: { playerId: string; seat: ComputerSeat }) {
+  const profile = useLlmSettings((s) =>
+    isLlmSeat(seat) ? s.settings.profiles.find((p) => p.id === seat.llm) : undefined,
+  );
+  const stats = useGame((s) => s.llmStats[playerId]);
+  if (!isLlmSeat(seat)) return <span className="bot-tag">{zh.bot}</span>;
+  const label = profile ? `${profile.name} · ${profile.model}` : 'AI 配置已删除，由内置电脑代走';
+  return (
+    <span className="bot-tag llm" title={llmTitle(label, stats)}>
+      AI
+    </span>
+  );
+}
+
 function PlayerCard({
   p,
   active,
   hm,
-  bot,
+  seat,
 }: {
   p: PlayerViewEntry;
   active: boolean;
   hm: boolean;
-  bot: boolean;
+  seat: ComputerSeat | undefined;
 }) {
   const free = p.accomplices - p.accomplicesPlaced;
   return (
@@ -131,7 +168,7 @@ function PlayerCard({
       <div className="player-head">
         <span className="swatch" />
         <span className="name">{p.name}</span>
-        {bot && <span className="bot-tag">{zh.bot}</span>}
+        {seat && <BotTag playerId={p.id} seat={seat} />}
         {hm && (
           <span className="hm" title={zh.harborMaster}>
             港
@@ -212,7 +249,7 @@ function PlayersPanel() {
             p={p}
             active={p.id === actor}
             hm={p.id === view.harborMaster}
-            bot={!!bots[p.id]}
+            seat={bots[p.id]}
           />
         ))}
       </ul>

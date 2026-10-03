@@ -1,29 +1,37 @@
 import { useState } from 'react';
-import {
-  MAX_PLAYERS,
-  MIN_PLAYERS,
-  type BotLevel,
-  type PlayerColor,
-  type PlayerSetup,
-} from '@manila/engine';
+import { MAX_PLAYERS, MIN_PLAYERS, type PlayerColor, type PlayerSetup } from '@manila/engine';
 import { zh } from '../i18n/zh';
 import { useGame } from '../game/store';
 import { hasSave } from '../game/save';
+import { isLlmSeat, type ComputerSeat } from '../game/seats';
+import { useLlmSettings, type LlmProfile } from '../llm/settings';
 import { PLAYER_COLORS } from '../scene/palette';
+import { AiSettings } from './AiSettings';
 import { RulesSheet } from './RulesSheet';
 
 const COLORS: PlayerColor[] = ['red', 'blue', 'orange', 'purple', 'white'];
 const DEFAULT_NAMES = ['小红', '阿蓝', '橙子', '紫苏', '小白'];
 
-/** A setup row: the engine's PlayerSetup plus whether the computer plays this seat. */
-type Row = PlayerSetup & { bot: BotLevel | null };
+/** A setup row: the engine's PlayerSetup plus who plays this seat (null = a human). */
+type Row = PlayerSetup & { bot: ComputerSeat | null };
 
 const freshPlayers = (n: number): Row[] =>
   Array.from({ length: n }, (_, i) => ({ name: DEFAULT_NAMES[i]!, color: COLORS[i]!, bot: null }));
 
-/** Human → easy computer → normal computer → human. */
-const nextSeat = (bot: BotLevel | null): BotLevel | null =>
-  bot === null ? 'normal' : bot === 'normal' ? 'easy' : null;
+/** <select> value for a seat; an AI seat whose profile was deleted reads as human. */
+function seatValue(bot: ComputerSeat | null, profiles: LlmProfile[]): string {
+  if (!bot) return 'human';
+  if (isLlmSeat(bot)) return profiles.some((p) => p.id === bot.llm) ? `llm:${bot.llm}` : 'human';
+  return bot;
+}
+
+const OPEN_AI_SETTINGS = '__ai-settings';
+
+function seatFromValue(value: string): ComputerSeat | null {
+  if (value === 'easy' || value === 'normal') return value;
+  if (value.startsWith('llm:')) return { llm: value.slice(4) };
+  return null;
+}
 
 export function SetupScreen() {
   const mode = useGame((s) => s.mode);
@@ -34,6 +42,8 @@ export function SetupScreen() {
   const [players, setPlayers] = useState<Row[]>(() => freshPlayers(4));
   const [pirateDisplace, setPirateDisplace] = useState(false);
   const [rules, setRules] = useState(false);
+  const [aiSettings, setAiSettings] = useState(false);
+  const profiles = useLlmSettings((s) => s.settings.profiles);
   const canResume = mode === 'live' && hasSave();
 
   const update = (i: number, patch: Partial<Row>) =>
@@ -92,13 +102,36 @@ export function SetupScreen() {
                 onChange={(e) => update(i, { name: e.target.value })}
                 aria-label={`玩家 ${i + 1} 名字`}
               />
-              <button
-                className={`btn tiny seat-toggle ${p.bot ? '' : 'ghost'}`}
-                onClick={() => update(i, { bot: nextSeat(p.bot) })}
-                title="切换：人类 / 电脑（普通）/ 电脑（简单）"
+              <select
+                className={`input seat-select ${seatValue(p.bot, profiles) === 'human' ? '' : 'on'}`}
+                value={seatValue(p.bot, profiles)}
+                onChange={(e) => {
+                  if (e.target.value === OPEN_AI_SETTINGS) setAiSettings(true);
+                  else update(i, { bot: seatFromValue(e.target.value) });
+                }}
+                aria-label={`玩家 ${i + 1} 由谁操作`}
+                title="人类、内置电脑，或在 AI 设置里配置的大语言模型"
               >
-                {p.bot ? `${zh.bot}·${zh.botLevel[p.bot]}` : '人类'}
-              </button>
+                <option value="human">人类</option>
+                <optgroup label="内置电脑">
+                  <option value="normal">
+                    {zh.bot}·{zh.botLevel.normal}
+                  </option>
+                  <option value="easy">
+                    {zh.bot}·{zh.botLevel.easy}
+                  </option>
+                </optgroup>
+                <optgroup label="大语言模型">
+                  {profiles.map((prof) => (
+                    <option key={prof.id} value={`llm:${prof.id}`}>
+                      AI·{prof.name}
+                    </option>
+                  ))}
+                  <option value={OPEN_AI_SETTINGS}>
+                    {profiles.length ? '管理 AI 配置…' : '配置大模型…'}
+                  </option>
+                </optgroup>
+              </select>
               <span className="colors">
                 {COLORS.map((c) => (
                   <button
@@ -173,7 +206,10 @@ export function SetupScreen() {
                 },
                 // createGame assigns ids p1..pN in seat order (contract).
                 Object.fromEntries(
-                  players.flatMap((p, i) => (p.bot ? [[`p${i + 1}`, p.bot]] : [])),
+                  players.flatMap((p, i) => {
+                    const seat = seatFromValue(seatValue(p.bot, profiles));
+                    return seat ? [[`p${i + 1}`, seat]] : [];
+                  }),
                 ),
               )
             }
@@ -183,6 +219,9 @@ export function SetupScreen() {
           <button className="btn ghost" onClick={() => setRules(true)}>
             规则速查
           </button>
+          <button className="btn ghost" onClick={() => setAiSettings(true)}>
+            AI 设置
+          </button>
           {canResume && (
             <button className="btn ghost" onClick={() => resumeSaved()}>
               继续上局
@@ -190,6 +229,7 @@ export function SetupScreen() {
           )}
         </div>
         {rules && <RulesSheet onClose={() => setRules(false)} />}
+        {aiSettings && <AiSettings onClose={() => setAiSettings(false)} />}
         {mode === 'mock' && (
           <p className="warn">
             规则引擎开发中：现在开始会进入固定的 4 人演示局，电脑座位暂不生效。
