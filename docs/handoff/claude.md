@@ -2,6 +2,19 @@
 
 > 新条目写在最上面。
 
+## 2026-10-03 — 按游戏审查改进（撤销、单人遮挡、部署、镜头、电脑难度、结算统计与回放）
+
+- 负责人看了审查报告（`/mnt/project-files/reviews/game-review-2026-10-03.md`）后选了 1、2、5、6、7、9，本 PR 全部完成：
+  - **撤销不能退过掷骰**：随机数在状态里，退回去重掷结果一样，等于先看骰子再改派遣。`dispatch` 遇到 `dice-rolled` 事件就清空 `history`。
+  - **单个真人不再交接**：只有一个真人、其余都是电脑时，`useCurtain` 不弹遮挡，`useViewer` 始终是这位玩家（电脑回合也能看自己的股票），顶栏隐藏「隐私」开关（`soleHuman`）。
+  - **GitHub Pages + PWA**：`.github/workflows/pages.yml`（main 每次更新发布 `packages/web/dist`）；`public/manifest.webmanifest`、像素图标、手写 `public/sw.js`（页面网络优先、`assets/` 缓存优先、跨域请求不碰），只在生产构建注册。**负责人要做一次**：仓库 Settings → Pages → Source 选 GitHub Actions，之后地址是 https://mengxinnn.github.io/Marina/ 。
+  - **开局镜头**：`scene/framing.ts` 把所有可操作地点投影到镜头平面，算出让它们落在玩家栏右侧、顶栏与底栏之间的目标点和缩放；`CameraRig` 开局滑到这个视角并同步 `OrbitControls.target`（OrbitControls 改为 `makeDefault`，去掉 `target` 属性，由 CameraRig 管）。港务长塔楼和货栈不再被挡。
+  - **电脑难度**（engine `src/ai/`，非契约）：简单电脑乱下比例 50% → 25%（`EASY_RANDOM_RATE`；对普通胜率约 7% → 26%）。新增 `hard.ts`：普通电脑最看好的 ≤6 个选择 + 「不做」，每个把本航次剩下的部分模拟 24 遍（`determinize` 只从看不到的股票里猜别人的暗股，骰子每遍新种子，所有人按普通电脑往下走，同一批世界比较各选择），按「自己财富 + 股票再涨一档的价值 − 其他人平均」选。`BotLevel` 加 `'hard'`，`chooseBotAction` 遇到 hard 转给 `chooseHardAction`；`rankChoices` 导出给它用。2 困难 + 2 普通 40 局：困难 34 胜，平均每人多 26 分，每步约 0.3 秒（最慢约 0.8 秒）。网页端在 Web Worker 里算（`game/hardWorker.ts` / `hardBot.ts`），没有 Worker 时同步算。
+  - **结算统计与回放**：store 新增 `actions`（开局以来所有动作，写进存档；旧存档没有就不显示统计），撤销时截断。`game/stats.ts` 用引擎重放出每航次财富和每人收支（测试保证 起始现金 + 收支 = 最终现金）。结算页三栏：结算 / 身价走势（SVG 折线，玩家颜色 + 线尾名字 + 悬停）/ 收支明细；「回放，从第几航次开始」用 `startReplay` 按记录带动画重播，回放中不接受操作、不存档，底栏可结束回放。
+- 契约变化：无（`BotLevel`、`rankChoices`、`chooseHardAction`、`determinize` 都在 `src/ai/`）。
+- 已知问题：玩家颜色（橙、白）在深色面板上的折线图里亮度偏高，因为颜色必须和棋子一致，靠线尾名字区分；回放时隐藏所有人的暗股（`viewer = null`）。手机适配（审查第 3 条）和真人竞拍参考（第 4 条）未做。
+- 下一步：负责人开启 Pages 后在手机上试一下安装和离线；按反馈再调困难电脑的强度/速度（`rollouts`、`candidates` 参数）。
+
 ## 2026-10-03 — 大语言模型电脑玩家 + AI 设置页
 
 - 负责人要求：让大语言模型当电脑玩家，在设置里配置并保存接口地址和模型信息。

@@ -27,9 +27,9 @@ export interface HardBotOptions {
   futureShareWeight?: number;
 }
 
-const DEFAULT_ROLLOUTS = 16;
+const DEFAULT_ROLLOUTS = 24;
 const DEFAULT_CANDIDATES = 6;
-const DEFAULT_FUTURE_SHARE_WEIGHT = 0.5;
+const DEFAULT_FUTURE_SHARE_WEIGHT = 1;
 /** Safety net: a voyage is ~30–60 actions. */
 const MAX_ROLLOUT_STEPS = 400;
 

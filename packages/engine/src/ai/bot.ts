@@ -51,7 +51,8 @@ export function chooseBotAction(view: PlayerView, legal: Action[], options: BotO
   if (choices.length === 1) return choices[0]!;
   if (options.level === 'hard') return chooseHardAction(view, legal, { random: options.random });
 
-  if (options.level === 'easy' && options.random() < EASY_RANDOM_RATE) return easyPick(choices, options.random);
+  if (options.level === 'easy' && options.random() < EASY_RANDOM_RATE)
+    return easyPick(choices, options.random);
 
   const me = pending.playerId;
   const noise = () => (options.random() - 0.5) * 0.4;
