@@ -2,6 +2,13 @@
 
 > 新条目写在最上面。
 
+## 2026-10-03 — 画面抗锯齿
+
+- 负责人反馈画面锯齿严重。原因：场景故意以约 400px 高度渲染（1440×900 窗口下画布只有 640×400），再用 `image-rendering: pixelated` 放大 2.25 倍，且关闭了 MSAA，所有斜边都是大台阶。
+- 改为按屏幕原生分辨率渲染（`devicePixelRatio`，上限 2，浏览器缩放/换屏时更新），开启 MSAA（`antialias: true`），去掉画布的 pixelated 放大样式。体素风格由几何本身保留。没有加后处理依赖。
+- 契约变化：无。
+- 已知问题：高 DPI 低端手机上填充率是原来的十几倍，若卡顿可再加自适应 dpr。
+
 ## 2026-10-03 — Claude 接手引擎（负责人决定）
 
 - 负责人决定 Codex 不再开发，由 Claude 接手全部开发；Codex 随后停用，PR 改由 Jules 自动 review（负责人加的 `pr-review.yml`）。AGENTS.md / CLAUDE.md / COLLABORATION.md 已更新。
