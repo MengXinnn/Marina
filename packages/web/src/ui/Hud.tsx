@@ -4,6 +4,8 @@ import { zh } from '../i18n/zh';
 import { useGame, useView } from '../game/store';
 import { PLAYER_COLORS, WARE_COLORS } from '../scene/palette';
 import { ActionBar } from './ActionBar';
+import { Banner } from './Banner';
+import { CountUp } from './CountUp';
 import { Curtain } from './Curtain';
 import { GameOver } from './GameOver';
 import { DevBar } from './DevBar';
@@ -18,6 +20,7 @@ export function Hud() {
       <MarketPanel />
       <EventLog />
       <ActionBar />
+      <Banner />
       <Toast />
       <DevBar />
       <Curtain />
@@ -38,7 +41,11 @@ function TopBar() {
       {roll && (
         <span className="dice">
           {WARES.filter((w) => roll[w]).map((w) => (
-            <span key={w} className="die" style={{ background: WARE_COLORS[w].css }}>
+            <span
+              key={`${view.voyage}-${view.movementRound}-${w}`}
+              className="die"
+              style={{ background: WARE_COLORS[w].css }}
+            >
               {roll[w]}
             </span>
           ))}
@@ -127,7 +134,7 @@ function PlayerCard({
             港
           </span>
         )}
-        <span className="cash">{p.cash}</span>
+        <CountUp className="cash" value={p.cash} />
         <Floaters playerId={p.id} />
       </div>
       <div className="player-row">

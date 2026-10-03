@@ -28,6 +28,15 @@ export const zh = {
   bot: '电脑',
   botLevel: { easy: '简单', normal: '普通' } as const,
   botThinking: (name: string) => `电脑 ${name} 正在思考……`,
+  banner: {
+    voyageSub: '竞拍港务长',
+    harborMaster: (name: string) => `${name} 成为港务长`,
+    harborMasterPrice: (price: number) => (price ? `出价 ${price} 比索` : '无人竞拍'),
+    roll: (n: number) => `第 ${n} 次掷骰`,
+    plunder: '海盗劫掠！',
+    plunderSub: (ware: string) => `${ware}船被洗劫一空`,
+    voyageEnd: (n: number) => `第 ${n} 航次结束`,
+  },
   gameOver: {
     title: '游戏结束',
     winner: (name: string) => `${name} 成为马尼拉最富有的商人！`,

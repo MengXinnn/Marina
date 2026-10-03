@@ -34,6 +34,7 @@ export function useWaypointMotion(initial: Pose) {
     if (!seg) {
       g.position.set(from.current.x, 0, from.current.z);
       g.rotation.y = from.current.ry;
+      g.rotation.z = 0;
       return;
     }
     const speed = useGame.getState().settings.speed;
@@ -46,6 +47,8 @@ export function useWaypointMotion(initial: Pose) {
       f.z + (seg.z - f.z) * k,
     );
     g.rotation.y = f.ry + (seg.ry - f.ry) * k;
+    // Nose up on take-off, nose down on landing.
+    g.rotation.z = seg.hop ? Math.sin(Math.PI * 2 * t.current) * 0.12 : 0;
     if (t.current >= 1) {
       from.current = { x: seg.x, z: seg.z, ry: seg.ry };
       queue.current.shift();
@@ -72,19 +75,29 @@ export function useWaypointMotion(initial: Pose) {
   };
 }
 
-/** Drop-in animation for freshly placed pieces. */
+/** Drop-in animation for freshly placed pieces: fall, squash on landing, settle. */
 export function useDropIn(height = 1.4, ms = 380) {
   const ref = useRef<THREE.Group>(null);
-  const start = useRef<number | null>(null);
-  useFrame(({ clock }) => {
+  const t = useRef(0);
+  useFrame((_, dt) => {
     const g = ref.current;
-    if (!g) return;
-    start.current ??= clock.elapsedTime;
-    const t = Math.min(1, ((clock.elapsedTime - start.current) * 1000) / ms);
-    // fall, then a small bounce
-    const y =
-      t < 0.75 ? height * (1 - (t / 0.75) ** 2) : Math.sin(((t - 0.75) / 0.25) * Math.PI) * 0.08;
+    if (!g || t.current >= 1.6) return;
+    t.current = Math.min(1.6, t.current + (dt * 1000 * useGame.getState().settings.speed) / ms);
+    const k = t.current;
+    let y = 0;
+    let squash = 0;
+    if (k < 0.75) {
+      y = height * (1 - (k / 0.75) ** 2);
+      squash = -0.12 * (k / 0.75); // stretch while falling
+    } else if (k < 1) {
+      y = Math.sin(((k - 0.75) / 0.25) * Math.PI) * 0.08;
+      squash = Math.sin(((k - 0.75) / 0.25) * Math.PI) * 0.28;
+    } else {
+      // little wobble that dies out
+      squash = Math.sin((k - 1) * Math.PI * 3.3) * 0.08 * (1 - (k - 1) / 0.6);
+    }
     g.position.y = y;
+    g.scale.set(1 + squash * 0.5, 1 - squash, 1 + squash * 0.5);
   });
   return ref;
 }
