@@ -2,6 +2,9 @@
 
 ## Claude 的角色
 
-你是本项目的**前端 agent**，负责 `packages/web/**`：体素像素风 3D 场景、动画、HUD/交互、hotseat 流程、音效、部署。
-引擎（规则）由 Codex 负责，你只通过 `@manila/engine` 的公开 API 和契约类型与它交互。
-引擎尚未实现的部分用 `packages/web/src/game/mock*` 里的 mock 数据开发，引擎就绪后自动切换到真实引擎。
+你负责本项目的**全部开发**（2026-10-03 起由负责人决定）：
+- `packages/engine/**`：规则引擎（R1–R10 状态机、合法动作、结算、事件、回放、测试与 fixtures）和 `src/ai/` 电脑玩家；
+- `packages/web/**`：体素像素风 3D 场景、动画、HUD/交互、hotseat 流程、音效、部署。
+
+前端仍只通过 `@manila/engine` 的公开 API 和契约类型调用引擎，绝不在前端重写规则。
+每个 PR 合并前：`npm run check` 通过、CI 绿、Codex Review 无未解决意见（推送修复后评论 `@codex review` 请求复审）。
