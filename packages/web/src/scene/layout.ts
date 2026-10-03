@@ -82,4 +82,10 @@ export const INSURANCE_STAND: [number, number] = [-2.6, 4.4];
 export const HARBOR_OFFICE: [number, number] = [-4.6, -3.4];
 export const WAREHOUSE: [number, number] = [-4.2, 0.2];
 
+/** Ware crates outside the warehouse, in WARES order. */
+export const CRATE = (i: number): [number, number] => [-2.7, -1.0 + i * 0.55];
+
+/** Anchor of the in-scene notice board used before the punts are loaded (auction, shares). */
+export const WORLD_PANEL: [number, number, number] = [6.9, 1.2, 0.4];
+
 export const CAMERA_TARGET: [number, number, number] = [10.2, 0, -1.0];

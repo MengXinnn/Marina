@@ -9,6 +9,7 @@ import {
   PIRATE_SHIP,
   SHIPYARD_SLIP,
   WAREHOUSE,
+  CRATE,
 } from './layout';
 import {
   barrelModel,
@@ -95,7 +96,7 @@ export function Scenery() {
         <VoxelMesh model="warehouse" build={warehouseModel} />
       </OnGround>
       {WARES.map((w, i) => (
-        <OnGround key={w} x={-2.7} z={-1.0 + i * 0.55}>
+        <OnGround key={w} x={CRATE(i)[0]} z={CRATE(i)[1]}>
           <VoxelMesh
             model={`crate-${w}`}
             build={() => crateModel(WARE_COLORS[w].main, WARE_COLORS[w].dark)}
