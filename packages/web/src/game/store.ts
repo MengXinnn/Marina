@@ -22,6 +22,7 @@ import { describeEvent } from '../i18n/zh';
 import { decideWithLlm, type LlmDecision } from '../llm/player';
 import { LlmError } from '../llm/providers';
 import { findProfile, useLlmSettings } from '../llm/settings';
+import { emitFxStep } from './fx';
 import { createMockState, mockDemoScript, mockView } from './mock';
 import { patchDisplay } from './present';
 import { clearSave, loadSave, writeSave } from './save';
@@ -282,6 +283,7 @@ export const useGame = create<GameStore>((set, get) => {
       const lines: LogLine[] = [];
       const floaters: Floater[] = [];
       let dice = get().dice;
+      const before = display;
       for (const e of step) {
         display = patchDisplay(display, e);
         const text = describeEvent(e, nameOf);
@@ -305,6 +307,7 @@ export const useGame = create<GameStore>((set, get) => {
       if (!cancelled()) {
         const speed = get().settings.speed;
         playStep(step, ANIM_MS.hop / speed);
+        emitFxStep({ events: step, before, after: display, speed });
         await wait(stepDuration(step) / speed, cancelled);
       }
     }
