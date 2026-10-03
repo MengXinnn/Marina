@@ -51,6 +51,16 @@ describe('parseReply', () => {
     );
   });
 
+  it('reads an answer that stops before the closing brace', () => {
+    // Seen from deepseek-flash: the reason survives too.
+    const r = parseReply('{"move": "place insurance", "reason": "免费先拿10块"', placement);
+    expect(r.ok && r.option.command).toBe('place insurance');
+    expect(r.reason).toBe('免费先拿10块');
+    expect(parseReply('{"move": "place pirate", "reason": "守株待兔', placement).reason).toBe(
+      '守株待兔',
+    );
+  });
+
   it('is forgiving about case, Chinese ware names and full-width characters', () => {
     expect(pick('{"move": "PLACE PORT c"}')).toBe('place port C');
     expect(pick('{"move": "place punt 丝绸"}')).toBe('place punt silk');

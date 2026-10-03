@@ -579,7 +579,7 @@ export function buildSystemPrompt(extraInstructions = ''): string {
     '# 回复格式',
     '每次轮到你时，你会收到局面和合法选项。只回复一个 JSON 对象，不要写任何其他文字，也不要用代码块：',
     '{"move": "<从合法选项里照抄的指令>", "reason": "<一句理由，简体中文，不超过 30 个字>"}',
-    'reason 会公开显示给其他玩家看，像牌桌上的闲聊：不要透露你持有哪些股票。',
+    'reason 会公开显示给其他玩家看，像牌桌上的闲聊：不要透露你持有哪些股票，也不要说你想让哪种货到港。',
   ];
   const extra = extraInstructions.trim();
   if (extra) rules.push('', '# 你的打法', extra);

@@ -39,6 +39,20 @@ function findJson(text: string): Record<string, unknown> | null {
       }
     }
   }
+  // Some models stop before the closing brace (or quote): try closing the last object.
+  const start = text.lastIndexOf('{');
+  if (start >= 0) {
+    const tail = text.slice(start).trimEnd().replace(/,$/, '');
+    for (const close of ['}', '"}']) {
+      try {
+        const value = JSON.parse(tail + close) as unknown;
+        if (value && typeof value === 'object' && !Array.isArray(value))
+          return value as Record<string, unknown>;
+      } catch {
+        // not that either
+      }
+    }
+  }
   return null;
 }
 

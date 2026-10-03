@@ -23,6 +23,7 @@ npm run dev      # http://localhost:5173
 
 - 支持 **OpenAI 兼容**接口（OpenAI、DeepSeek、Gemini、通义千问、Kimi、智谱、硅基流动、OpenRouter、Ollama、LM Studio、vLLM 等）和 **Anthropic Messages API**。
 - 模型只看到自己座位能看到的信息（`getPlayerView`），只能从引擎给出的合法动作里选（`getLegalActions`）；回复无效、超时或出错时由内置电脑代走这一步，连续失败 3 次后该座位改由内置电脑接管，保存设置后重新启用。
+- DeepSeek、通义千问、智谱的预设默认「关闭思考」：每步一两秒；打开思考会下得更细，但每步常要 20–60 秒。
 - 设置保存在本浏览器的 localStorage（API Key 为明文，可选择不记住）；请求从浏览器直接发往你填写的地址，服务需要允许跨域（CORS）。
 - 代码在 `packages/web/src/llm/`：`prompt.ts`（局面描述与指令）、`parse.ts`（解析回复）、`providers.ts`（两种接口）、`player.ts`（重试与校验）、`settings.ts`（配置与存储）。
 
