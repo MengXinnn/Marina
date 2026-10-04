@@ -533,25 +533,7 @@ body {
   height: 20px;
 }
 
-@media (max-width: 900px) {
-  .players {
-    width: 160px;
-  }
-  .market,
-  .log {
-    display: none;
-  }
-  .actionbar {
-    min-width: 0;
-    left: 12px;
-    right: 12px;
-    transform: none;
-    flex-wrap: wrap;
-  }
-  .devbar {
-    display: none;
-  }
-}
+/* Phone and small-screen layout: ui/mobile.css */
 
 /* ── rules sheet ── */
 .rules {

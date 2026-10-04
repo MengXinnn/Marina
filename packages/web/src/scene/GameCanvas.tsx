@@ -3,6 +3,7 @@ import { OrbitControls, OrthographicCamera } from '@react-three/drei';
 import { useEffect, useMemo, useState } from 'react';
 import { CAMERA_TARGET } from './layout';
 import { Harbor } from './Harbor';
+import { disarmPick } from './Pieces';
 
 /**
  * Render at the display's native resolution (capped at 2× to keep fill-rate sane on
@@ -30,7 +31,14 @@ export function GameCanvas() {
     [],
   );
   return (
-    <Canvas dpr={dpr} shadows gl={{ antialias: true }} style={{ position: 'fixed', inset: 0 }}>
+    <Canvas
+      dpr={dpr}
+      shadows
+      gl={{ antialias: true }}
+      style={{ position: 'fixed', inset: 0 }}
+      // A tap on open water puts away a card shown by an earlier tap (touch screens).
+      onPointerMissed={disarmPick}
+    >
       <color attach="background" args={['#0f4c6e']} />
       <OrthographicCamera
         makeDefault

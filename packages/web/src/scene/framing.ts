@@ -97,8 +97,11 @@ export function freeRectFromHud(width: number, height: number): FreeRect {
   const topbar = box('.topbar');
   const actionbar = box('.actionbar');
   const free: FreeRect = { left: 0, top: 0, right: width, bottom: height };
-  if (players) free.left = players.offsetLeft + players.offsetWidth + 8;
   if (topbar) free.top = topbar.offsetTop + topbar.offsetHeight + 4;
+  // Phones in portrait lay the player list out as a strip under the top bar.
+  if (players && players.offsetWidth > width / 2)
+    free.top = Math.max(free.top, players.offsetTop + players.offsetHeight + 4);
+  else if (players) free.left = players.offsetLeft + players.offsetWidth + 8;
   if (actionbar) free.bottom = actionbar.offsetTop - 4;
   // On narrow screens the panels cover too much to frame around; use the whole canvas.
   if (free.right - free.left < width * 0.55) Object.assign(free, { left: 0, right: width });

@@ -3,6 +3,7 @@ import { zh } from '../i18n/zh';
 import { useBotActing, useCurtain, useGame, useView } from '../game/store';
 import { PLAYER_COLORS } from '../scene/palette';
 import { BotThinking } from './BotThinking';
+import { useCoarsePointer } from './useCoarsePointer';
 
 /** Bottom prompt strip: who acts and what to do. It only collects "pass" — the engine validates. */
 export function ActionBar() {
@@ -94,6 +95,7 @@ type Send = (a: Action) => void;
  * (scene/WorldActions.tsx and the clickable spots); only "pass" stays here.
  */
 function Prompt({ pending, send }: { pending: PendingDecision; send: Send }) {
+  const touch = useCoarsePointer();
   switch (pending.type) {
     case 'bid':
       return <p>{zh.prompts.bid}</p>;
@@ -104,7 +106,13 @@ function Prompt({ pending, send }: { pending: PendingDecision; send: Send }) {
     case 'place-accomplice':
       return (
         <div className="row">
-          <p>{pending.blindPassenger ? zh.prompts.blind : zh.prompts.place}</p>
+          <p>
+            {pending.blindPassenger
+              ? zh.prompts.blind
+              : touch
+                ? zh.prompts.placeTouch
+                : zh.prompts.place}
+          </p>
           <span className="muted">{zh.round(pending.round)}</span>
           <button
             className="btn ghost"

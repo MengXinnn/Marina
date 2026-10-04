@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { create } from 'zustand';
 import { MARKET_TRACK, WARES, type PlayerViewEntry, type Ware } from '@manila/engine';
 import { zh } from '../i18n/zh';
 import { soleHuman, useGame, useView, type ComputerSeat, type LlmSeatStats } from '../game/store';
@@ -15,7 +16,33 @@ import { DevBar } from './DevBar';
 import { RulesSheet } from './RulesSheet';
 import { SoundControls } from './SoundControls';
 
+/**
+ * Phone layout: the market, the log and the top-bar buttons stay tucked away until asked for
+ * (desktop CSS shows them all and ignores this).
+ */
+type Sheet = 'menu' | 'market' | 'log';
+const useSheet = create<{ sheet: Sheet | null; toggle(s: Sheet): void; close(): void }>((set) => ({
+  sheet: null,
+  toggle: (sheet) => set((s) => ({ sheet: s.sheet === sheet ? null : sheet })),
+  close: () => set({ sheet: null }),
+}));
+
+/** Tapping the scene or another panel puts the open phone sheet away. */
+function useCloseSheetOutside() {
+  const open = useSheet((s) => s.sheet !== null);
+  const close = useSheet((s) => s.close);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target as Element).closest?.('.sheet-host')) close();
+    };
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
+  }, [open, close]);
+}
+
 export function Hud() {
+  useCloseSheetOutside();
   return (
     <div className="hud">
       <TopBar />
@@ -36,8 +63,10 @@ function TopBar() {
   const view = useView();
   const mode = useGame((s) => s.mode);
   const roll = view.lastRoll;
+  const menu = useSheet((s) => s.sheet === 'menu');
+  const toggle = useSheet((s) => s.toggle);
   return (
-    <header className="topbar panel">
+    <header className="topbar panel sheet-host">
       <span className="logo">{zh.title}</span>
       <span>{zh.voyage(view.voyage)}</span>
       <span className="phase">{zh.phase[view.phase]}</span>
@@ -55,6 +84,14 @@ function TopBar() {
         </span>
       )}
       {mode === 'mock' && <span className="badge">{zh.mockBanner}</span>}
+      <MiniMarket />
+      <button
+        className="btn tiny ghost menu-toggle"
+        aria-expanded={menu}
+        onClick={() => toggle('menu')}
+      >
+        {menu ? '收起' : '菜单'}
+      </button>
       <GameControls />
     </header>
   );
@@ -69,9 +106,18 @@ function GameControls() {
   // With one human and only computers there is no device to hand over.
   const solo = useGame((s) => soleHuman(s.state, s.bots) !== null);
   const nextSpeed = ({ 1: 2, 2: 4, 4: 1 } as const)[settings.speed];
+  const menu = useSheet((s) => s.sheet === 'menu');
+  const toggle = useSheet((s) => s.toggle);
+  const close = useSheet((s) => s.close);
   return (
-    <span className="controls">
-      <button className="btn tiny ghost" onClick={() => setRules(true)}>
+    <span className={`controls ${menu ? 'open' : ''}`}>
+      <button
+        className="btn tiny ghost"
+        onClick={() => {
+          close();
+          setRules(true);
+        }}
+      >
         规则
       </button>
       <SoundControls />
@@ -79,7 +125,10 @@ function GameControls() {
       <button
         className="btn tiny ghost"
         title="AI 玩家设置（大语言模型）"
-        onClick={() => setAi(true)}
+        onClick={() => {
+          close();
+          setAi(true);
+        }}
       >
         AI
       </button>
@@ -100,9 +149,13 @@ function GameControls() {
           {settings.privacy ? '隐私开' : '隐私关'}
         </button>
       )}
+      <button className="btn tiny ghost phone-only" onClick={() => toggle('log')}>
+        航海日志
+      </button>
       <button
         className="btn tiny ghost"
         onClick={() => {
+          close();
           if (window.confirm('回到开局设置？当前对局已自动保存，可以在设置页"继续上局"。'))
             backToSetup();
         }}
@@ -110,6 +163,21 @@ function GameControls() {
         新游戏
       </button>
     </span>
+  );
+}
+
+/** Phone top bar: each ware's current market value; tap for the full market table. */
+function MiniMarket() {
+  const view = useView();
+  const toggle = useSheet((s) => s.toggle);
+  return (
+    <button className="mini-market" title={zh.market} onClick={() => toggle('market')}>
+      {WARES.map((w) => (
+        <span key={w} style={{ background: WARE_COLORS[w].css }}>
+          {view.market[w]}
+        </span>
+      ))}
+    </button>
   );
 }
 
@@ -222,11 +290,14 @@ function Floaters({ playerId }: { playerId: string }) {
 function EventLog() {
   const log = useGame((s) => s.log);
   const ref = useRef<HTMLOListElement>(null);
+  const open = useSheet((s) => s.sheet === 'log');
+  const close = useSheet((s) => s.close);
   useEffect(() => {
     ref.current?.scrollTo({ top: ref.current.scrollHeight });
-  }, [log]);
+  }, [log, open]);
   return (
-    <section className="log panel">
+    <section className={`log panel sheet-host ${open ? 'open' : ''}`}>
+      <SheetClose onClose={close} />
       <h3>航海日志</h3>
       <ol ref={ref}>
         {log.map((l) => (
@@ -260,8 +331,11 @@ function PlayersPanel() {
 
 function MarketPanel() {
   const view = useView();
+  const open = useSheet((s) => s.sheet === 'market');
+  const close = useSheet((s) => s.close);
   return (
-    <section className="market panel">
+    <section className={`market panel sheet-host ${open ? 'open' : ''}`}>
+      <SheetClose onClose={close} />
       <h3>{zh.market}</h3>
       <table>
         <tbody>
@@ -287,6 +361,15 @@ function MarketPanel() {
         </tbody>
       </table>
     </section>
+  );
+}
+
+/** Close button of a phone sheet (hidden on desktop, where the panel is always shown). */
+function SheetClose({ onClose }: { onClose: () => void }) {
+  return (
+    <button className="btn tiny ghost sheet-close phone-only" onClick={onClose}>
+      ×
+    </button>
   );
 }
 
