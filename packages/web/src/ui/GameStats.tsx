@@ -4,6 +4,7 @@ import { useGame } from '../game/store';
 import { LEDGER_KEYS, gameStats, type GameStats } from '../game/stats';
 import { PLAYER_COLORS } from '../scene/palette';
 import { zh } from '../i18n/zh';
+import { useCoarsePointer } from './useCoarsePointer';
 
 /** Statistics of the finished game, replayed from the recorded actions (null if unavailable). */
 export function useGameStats(): GameStats | null {
@@ -28,6 +29,7 @@ const PAD = { left: 34, right: 64, top: 12, bottom: 26 };
  */
 export function FortuneChart({ stats, players }: { stats: GameStats; players: PlayerState[] }) {
   const [hover, setHover] = useState<number | null>(null);
+  const touch = useCoarsePointer();
   const points = stats.fortunes;
   const max = Math.max(10, ...points.flatMap((f) => Object.values(f)));
   const min = Math.min(0, ...points.flatMap((f) => Object.values(f)));
@@ -111,12 +113,15 @@ export function FortuneChart({ stats, players }: { stats: GameStats; players: Pl
             height={H - PAD.top - PAD.bottom}
             fill="transparent"
             onMouseEnter={() => setHover(i)}
+            onPointerDown={() => setHover(i)}
           />
         ))}
       </svg>
       <p className="fortune-tip muted" aria-live="polite">
         {hover === null
-          ? zh.stats.hoverHint
+          ? touch
+            ? zh.stats.touchHint
+            : zh.stats.hoverHint
           : `${hover === 0 ? zh.stats.start : zh.voyage(hover)}：` +
             [...players]
               .sort((a, b) => (points[hover]![b.id] ?? 0) - (points[hover]![a.id] ?? 0))

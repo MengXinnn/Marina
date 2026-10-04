@@ -1,0 +1,330 @@
+/*
+ * Small screens. Three layouts share the desktop markup:
+ *  - compact (narrow, or short like a phone held sideways): the top-bar buttons fold into a
+ *    menu, the market shrinks to a strip of values that opens the full table, the log opens
+ *    from the menu, and panels hug the screen edges (and the notch's safe areas);
+ *  - phone portrait (≤ 640px wide): the player list becomes a strip under the top bar;
+ *  - phone landscape (short): the player list stays on the left but each card is one row tighter.
+ */
+
+/* Desktop shows everything; these only exist for the compact layout. */
+.menu-toggle,
+.mini-market,
+.phone-only {
+  display: none;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  /* no double-tap zoom: the scene uses two taps to confirm a spot */
+  touch-action: manipulation;
+}
+canvas {
+  touch-action: none;
+}
+
+/* Fingers need bigger targets than a mouse pointer. */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 34px;
+  }
+  .btn.tiny {
+    min-height: 30px;
+    min-width: 30px;
+  }
+}
+
+@media (max-width: 900px), (max-height: 520px) {
+  .topbar {
+    top: calc(6px + env(safe-area-inset-top));
+    left: calc(8px + env(safe-area-inset-left));
+    right: calc(8px + env(safe-area-inset-right));
+    transform: none;
+    gap: 8px;
+    padding: 4px 8px;
+    min-height: 40px;
+    /* its drop-down menu must cover the player strip below it */
+    z-index: 35;
+  }
+  .logo {
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+  .phase {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .menu-toggle {
+    display: inline-block;
+    margin-left: auto;
+    flex: none;
+  }
+  .phone-only {
+    display: inline-block;
+  }
+
+  /* Current value of each ware; tap for the full table. */
+  .mini-market {
+    display: inline-flex;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+    flex: none;
+  }
+  .mini-market span {
+    min-width: 22px;
+    padding: 0 2px;
+    text-align: center;
+    color: #1d1d22;
+    border: var(--px) solid var(--edge);
+  }
+
+  /* Top-bar buttons drop down from the menu button. */
+  .topbar .controls {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 30;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    margin: 0;
+    padding: 8px;
+    min-width: 140px;
+    background: var(--panel);
+    border: var(--px) solid var(--edge);
+    box-shadow:
+      inset var(--px) var(--px) 0 var(--hi),
+      4px 4px 0 rgba(0, 0, 0, 0.45);
+  }
+  .topbar .controls.open {
+    display: flex;
+  }
+  .topbar .controls > .btn,
+  .topbar .controls .sound > .btn {
+    width: 100%;
+    text-align: left;
+  }
+  .topbar .controls .sound-pop {
+    right: calc(100% + 6px);
+    top: 0;
+    min-width: min(220px, calc(100vw - 180px));
+  }
+
+  /* Market and log are sheets: hidden until opened, then laid over the scene. */
+  .market,
+  .log {
+    display: none;
+  }
+  .market.open,
+  .log.open {
+    display: block;
+    z-index: 40;
+    top: calc(56px + env(safe-area-inset-top));
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100vw - 16px);
+    animation: pop-in 0.25s steps(4) both;
+  }
+  .log.open {
+    width: min(360px, calc(100vw - 16px));
+  }
+  /* opening the sheet is not a price move: don't pop every marker */
+  .market.open .cell.on {
+    animation: none;
+  }
+  .log.open ol {
+    max-height: min(50vh, 320px);
+  }
+  .sheet-close {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+  }
+  .market h3,
+  .log h3 {
+    padding-right: 36px;
+  }
+
+  .actionbar {
+    left: calc(8px + env(safe-area-inset-left));
+    right: calc(8px + env(safe-area-inset-right));
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    transform: none;
+    min-width: 0;
+    max-width: none;
+    gap: 8px;
+    padding: 6px 8px;
+    flex-wrap: wrap;
+  }
+  .actor {
+    font-size: 16px;
+  }
+  .devbar {
+    display: none;
+  }
+  .toast {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 32px);
+    white-space: normal;
+    text-align: center;
+  }
+  .banner {
+    top: 38%;
+  }
+  .banner-title {
+    font-size: 20px;
+    padding: 4px 26px 6px;
+    letter-spacing: 1px;
+  }
+  .banner-sub {
+    font-size: 12px;
+  }
+
+  /* In-scene cards and notices must fit the screen. */
+  .spot-tip {
+    width: min(300px, calc(100vw - 16px));
+  }
+  /* (anchored in a zero-width box: size to the content, wrap only past the screen width) */
+  .world-panel {
+    width: max-content;
+    max-width: calc(100vw - 16px);
+  }
+  .world-panel .row {
+    flex-wrap: wrap;
+  }
+
+  /* Dialogs: the dynamic viewport excludes the browser's own bars. */
+  .rules,
+  .gameover,
+  .ai-settings {
+    max-height: calc(100dvh - 16px);
+  }
+  .setup-backdrop,
+  .curtain-backdrop {
+    padding: 8px;
+  }
+  .setup,
+  .curtain {
+    padding: 14px 16px;
+  }
+  .setup-title {
+    font-size: 36px;
+    letter-spacing: 4px;
+  }
+}
+
+/* Compact player cards (both phone layouts): ware chips become colour squares. */
+@media (max-width: 640px), (max-height: 520px) {
+  .players {
+    padding: 4px;
+  }
+  .players ul {
+    gap: 4px;
+  }
+  .player {
+    padding: 3px 4px;
+  }
+  .player-head {
+    gap: 4px;
+  }
+  .player-row {
+    gap: 2px;
+    margin-top: 2px;
+    min-height: 0;
+  }
+  .player-row .chip {
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    font-size: 0;
+    vertical-align: middle;
+  }
+  .pip {
+    width: 6px;
+    height: 9px;
+  }
+  .floater {
+    font-size: 18px;
+  }
+}
+
+/* Phone portrait: players as a strip under the top bar. */
+@media (max-width: 640px) {
+  .logo,
+  .topbar .dice {
+    display: none;
+  }
+  .players {
+    top: calc(52px + env(safe-area-inset-top));
+    left: calc(8px + env(safe-area-inset-left));
+    right: calc(8px + env(safe-area-inset-right));
+    width: auto;
+  }
+  .players ul {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+  .player {
+    position: relative;
+    min-width: 0;
+  }
+  .player-head {
+    position: static;
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .player-head .name {
+    flex: 1 0 calc(100% - 20px);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .player-head .bot-tag {
+    display: none;
+  }
+  .player-head .cash::after {
+    content: '';
+  }
+  .player .passed {
+    font-size: 0;
+  }
+  .player .passed::after {
+    content: '弃';
+    font-size: 12px;
+  }
+  /* Money floats up just below the card, over the scene. */
+  .floaters {
+    left: 4px;
+    top: calc(100% + 18px);
+    bottom: auto;
+  }
+}
+
+/* Phone landscape: narrower player column; top bar and action bar start beside it. */
+@media (max-height: 520px) and (min-width: 641px) {
+  .players {
+    top: calc(6px + env(safe-area-inset-top));
+    left: calc(8px + env(safe-area-inset-left));
+    width: 150px;
+  }
+  .topbar,
+  .actionbar {
+    left: calc(166px + env(safe-area-inset-left));
+  }
+  .player-head .bot-tag {
+    display: none;
+  }
+}

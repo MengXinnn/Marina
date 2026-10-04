@@ -256,7 +256,7 @@ function InfoSpot({
   size: [number, number, number];
   tipY: number;
 }) {
-  const { hover, handlers } = usePick({});
+  const { hover, handlers } = usePick({ preview: true });
   const y = surfaceY(at[0], at[1]);
   return (
     <group position={[at[0], y, at[1]]}>

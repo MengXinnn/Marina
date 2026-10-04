@@ -14,7 +14,8 @@ import {
   SHIPYARD_SLIP,
   spaceX,
 } from './layout';
-import { ANIM_MS } from '../game/store';
+import { create } from 'zustand';
+import { ANIM_MS, useGame } from '../game/store';
 import { useDropIn, useWaypointMotion, type Pose, type Waypoint } from './motion';
 import {
   PUNT_DECK_VOXELS,
@@ -85,9 +86,34 @@ export interface Pickable {
   hint?: string;
 }
 
-/** Hover always shows the spot card; clicks only go through while the spot is selectable. */
-export function usePick({ selectable, onPick }: Pick<Pickable, 'selectable' | 'onPick'>) {
+/**
+ * Touch screens have no hover, so the first tap on a spot "arms" it — showing its card, the
+ * same as hovering — and a second tap on the armed spot picks it. One spot is armed at a time.
+ */
+const useArmed = create<{ armed: object | null }>(() => ({ armed: null }));
+export const disarmPick = () => useArmed.setState({ armed: null });
+// Any new state (a move, an undo, a new game) invalidates what the card was showing.
+useGame.subscribe((s, prev) => {
+  if (s.state !== prev.state || s.screen !== prev.screen) disarmPick();
+});
+/** Pointer type of the latest press, so a click knows whether it came from a finger. */
+let lastPointer = 'mouse';
+const fromTouch = (e: { pointerType?: string }) => (e.pointerType ?? lastPointer) !== 'mouse';
+/** Second line under the card's hint while a spot waits for its confirming tap. */
+export const CONFIRM_HINT = '再点一次确认';
+
+/**
+ * Hover (or a first tap) always shows the spot card; picks only go through while the spot is
+ * selectable — on touch, with a second tap when there is a card (`preview`) to read first.
+ */
+export function usePick({
+  selectable,
+  onPick,
+  preview = false,
+}: Pick<Pickable, 'selectable' | 'onPick'> & { preview?: boolean }) {
   const [hover, setHover] = useState(false);
+  const [id] = useState(() => ({}));
+  const armed = useArmed((s) => s.armed === id);
   useEffect(() => {
     if (!hover) return;
     document.body.style.cursor = selectable ? 'pointer' : 'help';
@@ -96,19 +122,39 @@ export function usePick({ selectable, onPick }: Pick<Pickable, 'selectable' | 'o
     };
   }, [hover, selectable]);
   const handlers = {
-    onPointerOver: (e: { stopPropagation(): void }) => {
+    onPointerDown: (e: { pointerType: string }) => {
+      lastPointer = e.pointerType;
+    },
+    onPointerOver: (e: { stopPropagation(): void; pointerType: string }) => {
+      if (fromTouch(e)) return;
       e.stopPropagation();
       setHover(true);
     },
-    onPointerOut: () => setHover(false),
+    onPointerOut: (e: { pointerType: string }) => {
+      if (!fromTouch(e)) setHover(false);
+    },
     onClick: (e: { stopPropagation(): void }) => {
+      if (preview && fromTouch({})) {
+        e.stopPropagation();
+        if (armed && selectable) {
+          disarmPick();
+          onPick?.();
+        } else useArmed.setState({ armed: id });
+        return;
+      }
       if (!selectable) return;
       e.stopPropagation();
       setHover(false);
       onPick?.();
     },
   };
-  return { hover, hot: hover && !!selectable, handlers };
+  const shown = hover || armed;
+  return {
+    hover: shown,
+    hot: shown && !!selectable,
+    confirming: armed && !!selectable,
+    handlers,
+  };
 }
 
 /** Accomplice stand with its printed cost; shows the occupant on top. */
@@ -128,7 +174,7 @@ export function Stand({
 } & Pickable &
   ThreeElements['group']) {
   const { selectable, actorColor, onPick, spot, hint, ...group } = pick;
-  const { hover, hot, handlers } = usePick({ selectable, onPick });
+  const { hover, hot, confirming, handlers } = usePick({ selectable, onPick, preview: !!spot });
   return (
     <group scale={PIECE_SCALE.stand} {...group}>
       <group {...handlers}>
@@ -141,7 +187,14 @@ export function Stand({
         {occupant && <Meeple key={occupant} color={occupant} pirate={pirateHat} position-y={0.2} />}
         {selectable && actorColor && !occupant && <Marker color={actorColor} hot={hot} />}
       </group>
-      {hover && spot && <SpotTip spot={spot} y={1.5} actionable={!!selectable} hint={hint} />}
+      {hover && spot && (
+        <SpotTip
+          spot={spot}
+          y={1.5}
+          actionable={!!selectable}
+          hint={confirming ? CONFIRM_HINT : hint}
+        />
+      )}
       {children}
     </group>
   );
@@ -196,7 +249,7 @@ export function Punt({
   ThreeElements['group']) {
   const { selectable, actorColor, onPick, spot, hint, ...group } = pick;
   const bob = useRef<THREE.Group>(null);
-  const { hover, hot, handlers } = usePick({ selectable, onPick });
+  const { hover, hot, confirming, handlers } = usePick({ selectable, onPick, preview: !!spot });
   const docked = punt.status !== 'sailing';
 
   // Sail in from the west harbour on mount, then follow every displayed change.
@@ -260,7 +313,14 @@ export function Punt({
               <Marker color={actorColor} hot={hot} />
             </group>
           )}
-          {hover && spot && <SpotTip spot={spot} y={1.3} actionable={!!selectable} hint={hint} />}
+          {hover && spot && (
+            <SpotTip
+              spot={spot}
+              y={1.3}
+              actionable={!!selectable}
+              hint={confirming ? CONFIRM_HINT : hint}
+            />
+          )}
         </group>
       </group>
     </group>
